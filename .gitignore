@@ -1,0 +1,20 @@
+# Secrets — never commit real credentials
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# Pilot batch / experiment outputs (can be large, regenerable)
+pilot_batch_results*.json
+*.jsonl.gen
+
+# OS cruft
+.DS_Store
+
+# Editor
+.vscode/
+.idea/

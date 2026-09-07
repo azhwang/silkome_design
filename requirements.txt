@@ -1,0 +1,5 @@
+# Version intentionally left unpinned — see CLAUDE.md "Non-obvious gotchas"
+# for the version-mismatch issues already hit (aiohttp, response
+# decompression). If you find a specific version combination that works
+# reliably in your environment, pin it here and note why.
+openai
