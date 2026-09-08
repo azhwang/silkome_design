@@ -12,6 +12,12 @@ venv/
 pilot_batch_results*.json
 *.jsonl.gen
 
+# Silkome datasets — large, externally sourced (SilkomeGPT repo, RSC paper
+# supplementary info), not ours to redistribute via this repo
+ALL_SILK_SEQ.csv
+d5ma00154d1_suppl.csv
+d5ma00154d2_suppl.csv
+
 # OS cruft
 .DS_Store
 
