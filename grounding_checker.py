@@ -359,6 +359,12 @@ _STRUCTURAL_TERM_KEY_HINTS = {
     "α-helix": ["alpha_propensity", "helix_propensity"],
     "beta-turn": ["turn_propensity", "beta_turn"],
     "β-turn": ["turn_propensity", "beta_turn"],
+    # disorder_prediction_chplot (bio_tools.py) reports `predicted_disordered`,
+    # never the literal phrase "intrinsically disordered".
+    "intrinsically disordered": ["predicted_disordered", "disorder"],
+    # The tool's actual crystalline-domain signal is the `poly_alanine`
+    # motif detection, not a field literally named "crystalline".
+    "crystalline region": ["poly_alanine", "poly_ala"],
 }
 
 
@@ -382,15 +388,20 @@ def _motif_grounded(claim: Claim, tool_output: Dict[str, Any]) -> Optional[str]:
     if _normalize(claim.value) in flat_text:
         return "motif name present in tool output"
 
-    # Fall back to the field-name synonym mapping — a related tool field
-    # exists even though the literal term wasn't reported verbatim.
+    # Fall back to the field-name synonym mapping — a related tool field or
+    # detected-motif *value* exists even though the literal term wasn't
+    # reported verbatim. Hints can match either a dict key (e.g.
+    # "beta-sheet" -> the key `mean_beta_propensity`) or a value (e.g.
+    # "crystalline region" -> the detected motif name `poly_alanine`,
+    # which appears as a string inside `motif_detector`'s `motifs` list,
+    # not as a key) — checking keys alone misses the latter shape.
     hints = _STRUCTURAL_TERM_KEY_HINTS.get(claim.value.lower())
     if hints:
         flat_keys = [_normalize(k) for k in _flatten_keys(tool_output)]
         for hint in hints:
             hint_n = _normalize(hint)
-            if any(hint_n in k for k in flat_keys):
-                return f"inferred from related tool field (matched key pattern {hint!r}), not a literal motif name"
+            if any(hint_n in k for k in flat_keys) or hint_n in flat_text:
+                return f"inferred from related tool field/value (matched pattern {hint!r}), not a literal motif name"
     return None
 
 
