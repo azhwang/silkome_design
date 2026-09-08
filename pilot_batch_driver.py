@@ -23,8 +23,13 @@ CSV or JSON/JSONL, with columns/keys: sequence, family, genus, species,
 protein_category, and optionally strength, toughness (ground truth, if
 available — omit if you're generating traces for unlabeled sequences).
 Column names are matched case-insensitively; adjust `_COLUMN_ALIASES` below
-if your actual dataset uses different names (the handoff doc's silkome
-dataset schema wasn't confirmed against the real file for this driver).
+if your actual dataset uses different names. Confirmed against the real
+silkome dataset (d5ma00154d1_suppl.csv, 2177 MaSp sequences): its sequence
+column is `seq`, and ground truth is pulled from `strength_norm`/
+`toughness_norm` (both in [0,1], as `outcome_accuracy_reward` requires) in
+preference to the raw `strength`/`toughness` columns, which are in
+arbitrary experimental units (~211-1284 and ~776-908963 respectively) and
+would silently break that reward's error math if used directly.
 """
 
 import argparse
@@ -59,8 +64,13 @@ _COLUMN_ALIASES = {
     "genus": ["genus"],
     "species": ["species"],
     "protein_category": ["protein_category", "category", "spidroin_type"],
-    "strength": ["strength"],
-    "toughness": ["toughness"],
+    # Prefer the normalized [0,1] columns when present — outcome_accuracy_reward
+    # (staged_grpo_rewards.py) requires ground truth in [0,1], but raw strength/
+    # toughness in the real silkome dataset span 211-1284 and 775-908963
+    # respectively. Fall back to the raw column name for datasets that don't
+    # provide a normalized variant.
+    "strength": ["strength_norm", "strength"],
+    "toughness": ["toughness_norm", "toughness"],
 }
 
 
