@@ -27,8 +27,10 @@ and ~776-908963 respectively) that would silently break
 A 20-sample real pilot run (real GPT-5.5 completions, not mocked) against
 this dataset scored **mean grounding 0.98, 60% of traces fully grounded**
 (343 numeric + 145 position + 81 motif claims checked; 0 API errors). That
-run also surfaced one more grounding-checker false positive beyond the
-five documented below — see "Bugs found and fixed" — now fixed.
+run surfaced two more grounding-checker bugs — see "Bugs found and
+fixed" — which, once fixed, pushed a second 20-sample run to **mean
+grounding 1.00, 85% fully grounded** with 0 API errors. A full 200-sample
+real pilot batch is the current in-progress step.
 
 - **`bio_tools.py`** (Stage 0) — real, self-contained bioinformatics
   analyses (Kyte-Doolittle hydropathy, Chou-Fasman secondary-structure
@@ -171,6 +173,33 @@ Worth knowing about since they affected real behavior, not just style:
   residue index. Fixed with a `(?!\.\d)` lookahead so a number immediately
   followed by a decimal fraction is no longer parsed as a bare position
   claim.
+- The same batch surfaced two more real terminology gaps, same shape as
+  the "beta-sheet" gap above: `intrinsically disordered` never matched
+  because `disorder_prediction_chplot` reports `predicted_disordered`, and
+  `crystalline region` never matched because the tool's only crystalline
+  signal was the `poly_alanine` motif. Fixing the latter also exposed a
+  bug in the hint mechanism itself: `_STRUCTURAL_TERM_KEY_HINTS` only
+  searched flattened dict *keys*, but `poly_alanine` appears as a *value*
+  inside `motif_detector`'s `motifs` list, not as a key — a key-only
+  search could never find it. Hints now check flattened values too.
+- A later real trace inferred "nanocrystalline regions" directly from its
+  own reported beta-rich spans ("beta-sheet-rich segments can form
+  hydrogen-bonded nanocrystalline regions") — biologically correct, since
+  silk crystallites are hydrogen-bonded beta-sheets, but `crystalline
+  region`'s hints only pointed at `poly_alanine`. Added
+  `beta_propensity`/`beta_rich` as additional hint targets. After both
+  terminology-gap fixes, the 20-sample pilot's mean grounding score moved
+  from 0.98 to 1.00 and fully-grounded fraction from 60% to 85%.
+- Two remaining motif FAILs in that same run (`amorphous region`,
+  mentioned twice) turned out to be a *different* failure mode, not
+  another naming gap: the model used the term in generic, hedged
+  textbook-style asides about silk mechanics ("toughness in silk depends
+  strongly on extensible amorphous regions that dissipate energy...")
+  rather than as a specific claim about the sequence at hand. A synonym
+  hint would force these to "ground" while quietly breaking what
+  "grounded" means — the trace never actually claims *this sequence* has
+  that property. Left unfixed deliberately; see "Known limitations"
+  below.
 
 ## Claim roles: direct vs. contrastive mentions
 
@@ -189,6 +218,22 @@ conservative (biased toward "direct" when in doubt), since under-flagging
 just means some background reasoning counts against the direct score (the
 prior status quo), while over-flagging would let real fabrications slip
 into the unscored bucket, which is the worse failure mode.
+
+### Known limitation: generic/hedged mechanistic language
+
+The direct/contrastive split doesn't capture a third real pattern: generic,
+hedged textbook-style reasoning ("turns **can** interrupt long crystals and
+create... amorphous regions") that uses structural vocabulary as
+explanatory scaffolding, not as a specific claim about the sequence at
+hand. These currently score as ungrounded direct claims (correctly, in the
+sense that nothing in the tool output specifically supports them — but
+also somewhat unfairly, since the model never claimed the tools found
+this). A proper fix would add a third claim role (e.g. `"generic"`,
+detected via modal hedging like "can"/"may"/"tends to" plus non-specific
+subjects like "silk" or "in general") tracked separately from the direct
+score, the same way contrastive mentions already are. Not implemented —
+deliberately deferred rather than papering over it with a loose hint
+mapping that would blur what "grounded" means.
 
 ## What still needs your input to be load-bearing
 
