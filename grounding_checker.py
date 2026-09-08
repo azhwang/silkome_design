@@ -126,7 +126,10 @@ _NUMERIC_RE = re.compile(
 )
 _POSITION_RE = re.compile(
     r"\b(?:residues?|positions?|spans?|domains?|regions?|turns?)\s+(?:at\s+|of\s+)?(?P<start>\d{1,4})\s*(?:-|to|–)\s*(?P<end>\d{1,4})\b"
-    r"|\b(?:residue|position)\s+(?P<single>\d{1,4})\b"
+    # (?!\.\d) excludes e.g. "residue 0.0194" (a per-residue decimal value,
+    # not a residue index) from matching as a bare position claim — the
+    # trailing \b alone fires right before the decimal point.
+    r"|\b(?:residue|position)\s+(?P<single>\d{1,4})(?!\.\d)\b"
     # Fallback: a bare "N-M" number range with no keyword at all. Real model
     # output often phrases spans this way ("beta_rich_spans at 16-23, 23-35,
     # 32-37..." — only the first gets the "at", the rest are bare), and those
