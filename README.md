@@ -4,6 +4,32 @@ Five modules implementing the staged roadmap discussed for the silk
 reasoning project (tool validation → warm traces → grounded-vs-shortcut
 ORPO → staged multi-component GRPO):
 
+## Real dataset
+
+The real silkome dataset is `d5ma00154d1_suppl.csv` (2,177 MaSp sequences
+with fiber-level mechanical properties — sequence, force_vector, strength,
+toughness, and normalized `strength_norm`/`toughness_norm` in `[0, 1]`),
+supplementary data from the RSC paper at
+https://pubs.rsc.org/ma/article/6/13/4267/896018. `d5ma00154d2_suppl.csv`
+is the same set with added model predictions. `ALL_SILK_SEQ.csv` (10,449
+sequences, no mechanical properties) is the raw sequence pool from
+[SilkomeGPT](https://github.com/lamm-mit/SilkomeGPT). All three are
+gitignored (large, externally sourced — not ours to redistribute here);
+place them in the repo root to run against real data.
+
+`pilot_batch_driver.py`'s `_COLUMN_ALIASES` has been validated against
+`d5ma00154d1_suppl.csv`: the sequence column is `seq`, and ground truth
+is pulled from `strength_norm`/`toughness_norm` in preference to the raw
+`strength`/`toughness` columns, which are in arbitrary units (~211-1284
+and ~776-908963 respectively) that would silently break
+`outcome_accuracy_reward`'s `[0, 1]` error math if used directly.
+
+A 20-sample real pilot run (real GPT-5.5 completions, not mocked) against
+this dataset scored **mean grounding 0.98, 60% of traces fully grounded**
+(343 numeric + 145 position + 81 motif claims checked; 0 API errors). That
+run also surfaced one more grounding-checker false positive beyond the
+five documented below — see "Bugs found and fixed" — now fixed.
+
 - **`bio_tools.py`** (Stage 0) — real, self-contained bioinformatics
   analyses (Kyte-Doolittle hydropathy, Chou-Fasman secondary-structure
   propensity, motif detection, repeat-periodicity analysis, Uversky
@@ -53,20 +79,11 @@ ORPO → staged multi-component GRPO):
 
 Everything runs standalone and has been tested (`python3 <file>.py` in each
 file runs a worked example; all six pass a full regression check together).
-`call_trace_generator_llm()` in `trace_generation.py` is now wired to a real
-OpenAI-compatible client (reads `OPENAI_API_KEY` from the environment) —
-**but this has not been tested against a live API**, since this sandbox has
-no network access and the `openai` package isn't installed here. Before
-trusting it:
-
-- `pip install openai --break-system-packages`
-- `export OPENAI_API_KEY="sk-..."` (never hardcode it in the file)
-- Confirm the `MODEL_NAME` string in `call_trace_generator_llm` matches
-  what your provider actually calls GPT-5.5 (deployment names vary by
-  provider/org — I don't have that confirmed against your account)
-- Run `trace_generation.py`'s `__main__` once with the key set to confirm
-  a real completion comes back in the expected `<reasoning>/<answer>`
-  shape before pointing `pilot_batch_driver.py` at a full batch
+`call_trace_generator_llm()` in `trace_generation.py` is wired to a real
+OpenAI-compatible client (reads `OPENAI_API_KEY` from the environment) and
+**has now been tested against a live API**: a 20-sample real pilot run
+against `d5ma00154d1_suppl.csv` completed with 0 API errors and a mean
+grounding score of 0.98 (see "Real dataset" above).
 
 `call_prm_judge()` in `staged_grpo_rewards.py` is still an unimplemented
 stub (Stage 3 of the reward schedule) — same wiring pattern applies there
@@ -147,6 +164,13 @@ Worth knowing about since they affected real behavior, not just style:
     worth internalizing that the *first* number a checker like this
     produces on real model output shouldn't be trusted at face value until
     you've spot-checked a few of its "OK"s, not just its "FAIL"s.
+- A real 20-sample pilot batch against the actual silkome dataset surfaced
+  a seventh bug: `_POSITION_RE`'s single-residue branch matched "residue 0"
+  inside phrases like "net charge per residue 0.0194", because `\b` fires
+  right before the decimal point — a per-residue decimal statistic isn't a
+  residue index. Fixed with a `(?!\.\d)` lookahead so a number immediately
+  followed by a decimal fraction is no longer parsed as a bare position
+  claim.
 
 ## Claim roles: direct vs. contrastive mentions
 
@@ -186,11 +210,9 @@ into the unscored bucket, which is the worse failure mode.
   TRL expects — its group-level computation needs GRPO's k-samples-per-prompt
   structure. Call `calibration_reward_grouped` separately and fold it into
   the reward your training loop passes to the advantage computation.
-- `pilot_batch_driver.py`'s `_COLUMN_ALIASES` are a best guess at likely
-  column names for the actual silkome dataset schema — I haven't confirmed
-  these against the real dataset file, since I don't have access to it.
-  Check/adjust before your first real run; the loader will raise a clear
-  error (not silently produce zero samples) if no column resolves, but a
-  wrong alias match on the wrong column would fail silently, so it's worth
-  a manual spot-check of the first few loaded `SilkSample`s.
+- `pilot_batch_driver.py`'s `_COLUMN_ALIASES` have been validated against
+  the real `d5ma00154d1_suppl.csv` schema (see "Real dataset" above). If
+  you point the driver at a different dataset file, spot-check the first
+  few loaded `SilkSample`s again — a wrong alias match on the wrong column
+  fails silently rather than raising.
 
