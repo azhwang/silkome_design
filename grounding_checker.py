@@ -362,9 +362,12 @@ _STRUCTURAL_TERM_KEY_HINTS = {
     # disorder_prediction_chplot (bio_tools.py) reports `predicted_disordered`,
     # never the literal phrase "intrinsically disordered".
     "intrinsically disordered": ["predicted_disordered", "disorder"],
-    # The tool's actual crystalline-domain signal is the `poly_alanine`
-    # motif detection, not a field literally named "crystalline".
-    "crystalline region": ["poly_alanine", "poly_ala"],
+    # The tool's crystalline-domain signal is either the `poly_alanine`
+    # motif detection, or beta-sheet propensity (silk crystallites are
+    # hydrogen-bonded beta-sheets — a real trace inferred "nanocrystalline
+    # regions" directly from reported beta-rich spans) — not a field
+    # literally named "crystalline".
+    "crystalline region": ["poly_alanine", "poly_ala", "beta_propensity", "beta_rich"],
 }
 
 
