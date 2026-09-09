@@ -368,6 +368,20 @@ _STRUCTURAL_TERM_KEY_HINTS = {
     # regions" directly from reported beta-rich spans) — not a field
     # literally named "crystalline".
     "crystalline region": ["poly_alanine", "poly_ala", "beta_propensity", "beta_rich"],
+    # Symmetric counterpart to "crystalline region": the tool's amorphous-
+    # domain signal is the glycine-rich/GGX motif detection (silk's
+    # amorphous matrix is the glycine-rich spacer between crystalline
+    # poly-Ala blocks) — not a field literally named "amorphous". Found via
+    # a real pilot batch: 23/46 "amorphous region" fails had a tool-detected
+    # glycine-rich motif that this mapping's absence prevented from ever
+    # grounding. Deliberately excludes `predicted_disordered`: unlike a
+    # motif name (a value that only appears when actually detected), that
+    # field's *key* is always present regardless of its boolean value, so
+    # hinting on the key name would ground "amorphous" claims even in
+    # traces where disorder was predicted false — verified this would
+    # wrongly "ground" a purely speculative, tool-unsupported mention
+    # before dropping it.
+    "amorphous region": ["glycine_rich_spacer", "ggx_repeat", "gpgxx_repeat"],
 }
 
 
