@@ -29,8 +29,18 @@ this dataset scored **mean grounding 0.98, 60% of traces fully grounded**
 (343 numeric + 145 position + 81 motif claims checked; 0 API errors). That
 run surfaced two more grounding-checker bugs — see "Bugs found and
 fixed" — which, once fixed, pushed a second 20-sample run to **mean
-grounding 1.00, 85% fully grounded** with 0 API errors. A full 200-sample
-real pilot batch is the current in-progress step.
+grounding 1.00, 85% fully grounded** with 0 API errors.
+
+The full **200-sample real pilot batch** (real GPT-5.5 completions,
+`--seed 0`) completed with **0 API errors**, then improved from **mean
+grounding 0.99 / 74% fully grounded** to **mean grounding 0.994 / 86%
+fully grounded** after one more grounding-checker fix found by manually
+spot-checking the FAILs (see "Bugs found and fixed") — 3,509 numeric +
+880 position + 870 motif direct claims checked; only 2 position and 30
+motif claims remain ungrounded (25 of those 30 are the deliberately
+unfixed generic-language pattern discussed below, not a checker gap).
+Results are saved in `pilot_batch_results_200.json` (gitignored —
+regenerable, not source of truth).
 
 - **`bio_tools.py`** (Stage 0) — real, self-contained bioinformatics
   analyses (Kyte-Doolittle hydropathy, Chou-Fasman secondary-structure
@@ -83,9 +93,9 @@ Everything runs standalone and has been tested (`python3 <file>.py` in each
 file runs a worked example; all six pass a full regression check together).
 `call_trace_generator_llm()` in `trace_generation.py` is wired to a real
 OpenAI-compatible client (reads `OPENAI_API_KEY` from the environment) and
-**has now been tested against a live API**: a 20-sample real pilot run
-against `d5ma00154d1_suppl.csv` completed with 0 API errors and a mean
-grounding score of 0.98 (see "Real dataset" above).
+**has now been tested at pilot scale against a live API**: a 200-sample
+real pilot batch against `d5ma00154d1_suppl.csv` completed with 0 API
+errors and a mean grounding score of 0.994 (see "Real dataset" above).
 
 `call_prm_judge()` in `staged_grpo_rewards.py` is still an unimplemented
 stub (Stage 3 of the reward schedule) — same wiring pattern applies there
@@ -190,16 +200,36 @@ Worth knowing about since they affected real behavior, not just style:
   `beta_propensity`/`beta_rich` as additional hint targets. After both
   terminology-gap fixes, the 20-sample pilot's mean grounding score moved
   from 0.98 to 1.00 and fully-grounded fraction from 60% to 85%.
-- Two remaining motif FAILs in that same run (`amorphous region`,
-  mentioned twice) turned out to be a *different* failure mode, not
+- Two remaining motif FAILs in that same 20-sample run (`amorphous
+  region`, mentioned twice) looked like a *different* failure mode, not
   another naming gap: the model used the term in generic, hedged
   textbook-style asides about silk mechanics ("toughness in silk depends
   strongly on extensible amorphous regions that dissipate energy...")
-  rather than as a specific claim about the sequence at hand. A synonym
-  hint would force these to "ground" while quietly breaking what
-  "grounded" means — the trace never actually claims *this sequence* has
-  that property. Left unfixed deliberately; see "Known limitations"
-  below.
+  rather than as a specific claim about the sequence at hand. Left
+  unfixed at the time on that theory — see "Known limitations" below —
+  but the 200-sample batch showed the theory was only half right (next
+  bullet).
+- The 200-sample batch surfaced 46 `amorphous region` motif FAILs, and
+  manually reading them (not just the aggregate score) split cleanly in
+  two: **23 of 46 had a real tool-detected `glycine_rich_spacer`/`GGX`
+  motif** — the actual amorphous-domain signal in silk biology (the
+  glycine-rich spacer between crystalline poly-Ala blocks) — that
+  `_STRUCTURAL_TERM_KEY_HINTS` had no mapping for, the exact symmetric gap
+  to the `crystalline region` fix above. Fixed the same way: added
+  `glycine_rich_spacer`/`ggx_repeat`/`gpgxx_repeat` as hint targets. A
+  first attempt also hinted on `predicted_disordered`, which looked
+  reasonable by analogy to the `intrinsically disordered` mapping — but
+  unlike a motif name (a *value* that only appears when actually
+  detected), `predicted_disordered` is a dict *key* that's always present
+  regardless of its boolean value, so it would have "grounded" amorphous
+  claims even in traces where disorder was predicted `false`. Caught by
+  testing against a real trace with zero tool signal before it was
+  committed; dropped from the hint list. The other 23/46 are the
+  genuinely generic/hedged case from the bullet above, confirmed by
+  checking each one has no tool-detected glycine-rich motif at all —
+  correctly left ungrounded, not a checker bug. Net effect on the
+  200-sample batch: mean grounding 0.99 → 0.994, fully-grounded fraction
+  74% → 86%.
 
 ## Claim roles: direct vs. contrastive mentions
 
@@ -228,12 +258,16 @@ explanatory scaffolding, not as a specific claim about the sequence at
 hand. These currently score as ungrounded direct claims (correctly, in the
 sense that nothing in the tool output specifically supports them — but
 also somewhat unfairly, since the model never claimed the tools found
-this). A proper fix would add a third claim role (e.g. `"generic"`,
-detected via modal hedging like "can"/"may"/"tends to" plus non-specific
-subjects like "silk" or "in general") tracked separately from the direct
-score, the same way contrastive mentions already are. Not implemented —
-deliberately deferred rather than papering over it with a loose hint
-mapping that would blur what "grounded" means.
+this). Confirmed at pilot scale: 23 of the 200-sample batch's 46
+`amorphous region` FAILs are exactly this pattern (see "Bugs found and
+fixed") — every one of them checked to have zero tool-detected
+glycine-rich/GGX motif backing it, i.e. genuinely nothing to ground
+against, not a checker gap. A proper fix would add a third claim role
+(e.g. `"generic"`, detected via modal hedging like "can"/"may"/"tends to"
+plus non-specific subjects like "silk" or "in general") tracked separately
+from the direct score, the same way contrastive mentions already are. Not
+implemented — deliberately deferred rather than papering over it with a
+loose hint mapping that would blur what "grounded" means.
 
 ## What still needs your input to be load-bearing
 
