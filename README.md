@@ -1,6 +1,6 @@
 # Reasoning Pipeline Scaffold
 
-Five modules implementing the staged roadmap discussed for the silk
+Seven modules implementing the staged roadmap discussed for the silk
 reasoning project (tool validation → warm traces → grounded-vs-shortcut
 ORPO → staged multi-component GRPO):
 
@@ -74,12 +74,26 @@ regenerable, not source of truth).
   `--use-mock` to test the driver itself today without a dataset file or
   API key.
 
-- **`orpo_pair_construction.py`** (Stage 3) — builds ORPO preference pairs
+- **`orpo_pair_construction.py`** (Stage 2/3) — builds ORPO preference pairs
   that isolate reasoning quality from answer correctness: same-answer
   contrasts (grounded vs. shortcut reasoning reaching the same conclusion),
   anti-shortcut contrasts (grounded-but-wrong preferred over
   shortcut-but-right, at a tunable minority ratio, to actually suppress
   lucky guessing), and standard correctness-dominant pairs for volume.
+  Needs multiple traces sharing a `prompt_id` to build anything — see
+  `orpo_trace_pool.py`, its actual real-data driver.
+
+- **`orpo_trace_pool.py`** (Stage 2/3) — the driver that actually generates
+  real ORPO pairs: K tool-grounded + K tool-withheld ("shortcut") real LLM
+  completions per prompt, scores each for grounding and outcome
+  correctness (reusing `staged_grpo_rewards`'s error math so "correct"
+  means the same thing in both places), and feeds the pool to
+  `PairConstructor`. The tool-withheld prompt exists because
+  `pilot_batch_driver.py`'s single trace-per-sequence output has zero
+  pairs latent in it (`PairConstructor` only pairs within a shared
+  `prompt_id`), and a real sanity check found natural sampling never
+  supplies the low-grounding half on its own — see "Stage 2/3: real ORPO
+  pairs" below.
 
 - **`staged_grpo_rewards.py`** (Stage 4) — the multi-component GRPO reward
   (outcome accuracy, step coherence, tool-use correctness, PRM-based
@@ -87,15 +101,39 @@ regenerable, not source of truth).
   `StagedRewardScheduler(stage=1..4)` so components come online in order of
   signal reliability rather than all at once.
 
+## Stage 2/3: real ORPO pairs
+
+`orpo_trace_pool.py` generates K tool-grounded + K tool-withheld
+("shortcut") real completions per prompt and feeds them to
+`PairConstructor`. A first real sanity check (3 prompts x 4 samples) found
+the tool-withheld prompt was necessary, not optional: **0 pairs were built**
+because every grounded-mode completion happened to be correct (0/6
+grounded traces were wrong), so `PairConstructor`'s anti-shortcut and
+same-answer bucket logic had nothing to contrast against — natural
+sampling variance alone doesn't reliably produce the low-grounding half of
+a pair.
+
+A follow-up **30-prompt x (2 grounded + 2 shortcut) real run** (120 total
+completions, `--seed 0`) confirmed the tool-withheld prompt fixes this:
+**0 API errors, 96.7% of prompts (29/30) showed bucket diversity, and 60
+real ORPO pairs were built** — 28 `standard_fallback`, 19 `anti_shortcut`,
+10 `standard`, 3 `same_answer` — with a chosen-incorrect fraction of 0.32,
+close to the configured `anti_shortcut_ratio=0.25` target. Results are
+saved in `orpo_pairs_n30.json` (gitignored — regenerable, not source of
+truth).
+
 ## What's real vs. stubbed
 
 Everything runs standalone and has been tested (`python3 <file>.py` in each
-file runs a worked example; all six pass a full regression check together).
-`call_trace_generator_llm()` in `trace_generation.py` is wired to a real
-OpenAI-compatible client (reads `OPENAI_API_KEY` from the environment) and
-**has now been tested at pilot scale against a live API**: a 200-sample
-real pilot batch against `d5ma00154d1_suppl.csv` completed with 0 API
-errors and a mean grounding score of 0.994 (see "Real dataset" above).
+file runs a worked example; all seven pass a full regression check
+together). `call_trace_generator_llm()` in `trace_generation.py` is wired
+to a real OpenAI-compatible client (reads `OPENAI_API_KEY` from the
+environment) and **has now been tested at pilot scale against a live
+API**: a 200-sample real pilot batch against `d5ma00154d1_suppl.csv`
+completed with 0 API errors and a mean grounding score of 0.994 (see "Real
+dataset" above). `orpo_trace_pool.py` has likewise been validated at real
+scale (see "Stage 2/3: real ORPO pairs" above) — 60 real preference pairs
+now exist and are ready to feed an actual ORPO training run.
 
 `call_prm_judge()` in `staged_grpo_rewards.py` is still an unimplemented
 stub (Stage 3 of the reward schedule) — same wiring pattern applies there
