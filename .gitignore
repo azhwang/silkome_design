@@ -10,6 +10,7 @@ venv/
 
 # Pilot batch / experiment outputs (can be large, regenerable)
 pilot_batch_results*.json
+orpo_pairs*.json
 *.jsonl.gen
 
 # Silkome datasets — large, externally sourced (SilkomeGPT repo, RSC paper

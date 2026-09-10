@@ -111,6 +111,61 @@ Tool outputs:
 
 
 # ---------------------------------------------------------------------------
+# Step 2b: the "shortcut" prompt variant — deliberately withholds tool
+# outputs, for Stage 2/3 ORPO pair construction (orpo_trace_pool.py).
+#
+# A real 12-completion sanity run showed this reasoning-tier model grounds
+# reliably (~0.97-1.00) at temperature=1 when given tool outputs — there's
+# no natural "shortcut" (ungrounded) variance to sample for the
+# grounded-vs-shortcut ORPO contrast the roadmap wants. This prompt
+# manufactures a genuine shortcut trace instead of hoping one turns up: the
+# model sees the same sequence and metadata but never the tool outputs, so
+# any specific number/position/motif it states has nothing real to ground
+# against (the grounding checker still runs the real tools independently
+# and checks the completion's claims against them — see
+# generate_shortcut_trace_for_sample below). This is a different reasoning
+# *process* (pattern-matching from general priors, not tool-grounded
+# analysis), not an instruction to fabricate — deliberately not "invent
+# fake numbers and claim they're from analysis," which would teach the
+# reward model the wrong thing (that grounding fails because of dishonesty
+# specifically, not because the reasoning skipped verification).
+# ---------------------------------------------------------------------------
+
+SHORTCUT_SYSTEM_PROMPT = """You are a biophysics expert asked for a fast, intuitive estimate of a spider \
+silk protein's fiber-level mechanical properties. You will be given only the protein sequence and its \
+taxonomic metadata — no bioinformatics tool outputs are available for this request.
+
+Your job: write a brief reasoning chain based on general domain knowledge and whatever you can judge by \
+eye from the sequence and its taxonomy (e.g. typical composition/structure patterns for this protein \
+family), then predict strength and toughness. This is a quick expert judgment call, not a rigorous \
+per-residue analysis — don't claim to have measured or computed specific values you don't actually have \
+access to here.
+
+Respond in this exact format:
+
+<reasoning>
+...your step-by-step reasoning...
+</reasoning>
+<answer>
+{"strength": <float in [0,1]>, "toughness": <float in [0,1]>}
+</answer>
+"""
+
+
+def build_shortcut_prompt(sample: SilkSample) -> str:
+    return f"""{SHORTCUT_SYSTEM_PROMPT}
+
+Protein sequence:
+{sample.sequence}
+
+Family: {sample.family}
+Genus: {sample.genus}
+Species: {sample.species}
+Protein category: {sample.protein_category}
+"""
+
+
+# ---------------------------------------------------------------------------
 # Step 3: the actual LLM call (stub) + a mock for end-to-end testing
 # ---------------------------------------------------------------------------
 
@@ -230,6 +285,33 @@ def generate_trace_for_sample(
 ) -> GeneratedTrace:
     tool_steps = run_tools_as_trace_steps(sample.sequence)
     prompt = build_trace_prompt(sample, tool_steps)
+    completion = llm_fn(prompt)
+    structured_trace = assemble_structured_trace(tool_steps, completion)
+    report = check_trace_grounding(structured_trace)
+    return GeneratedTrace(
+        sample=sample,
+        llm_completion=completion,
+        structured_trace=structured_trace,
+        grounding_report=report,
+    )
+
+
+def generate_shortcut_trace_for_sample(
+    sample: SilkSample,
+    llm_fn: Callable[[str], str] = call_trace_generator_llm,
+) -> GeneratedTrace:
+    """
+    Same output shape as generate_trace_for_sample, but the LLM never sees
+    the tool outputs (build_shortcut_prompt instead of build_trace_prompt).
+    The tools are still run and still assembled into structured_trace, so
+    check_trace_grounding scores the completion against real tool output
+    the model had no access to — an honest low grounding score, not a
+    simulated one, since the model may still happen to state something
+    that coincidentally matches (that's a real, legitimate "lucky" case
+    the grounding checker should catch either way).
+    """
+    tool_steps = run_tools_as_trace_steps(sample.sequence)
+    prompt = build_shortcut_prompt(sample)
     completion = llm_fn(prompt)
     structured_trace = assemble_structured_trace(tool_steps, completion)
     report = check_trace_grounding(structured_trace)
