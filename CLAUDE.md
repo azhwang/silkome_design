@@ -26,16 +26,24 @@ Full roadmap (5 stages):
   dependency-free bioinformatics analyses with a built-in validation
   harness (`python3 bio_tools.py`) checked against known biology + the real
   PySp sequence from the original handoff doc.
-- **Stage 1 (grounding + trace generation): WORKING, credentials wired.**
+- **Stage 1 (grounding + trace generation): DONE — real pilot run.**
   `grounding_checker.py` cross-checks trace claims against tool outputs.
   `trace_generation.py`'s `call_trace_generator_llm` is wired to a real
-  OpenAI-compatible client (GPT-5.5) and has produced real completions with
-  grounding scores of 0.96 and 1.00 on hand-run examples. **Not yet run as
-  a real pilot batch** — `pilot_batch_driver.py` exists and works in mock
-  mode, but hasn't been pointed at the actual silkome dataset file yet.
-- **Stage 2/3 (grounded ORPO): SCAFFOLDED, untested on real data.**
-  `orpo_pair_construction.py`'s bucket/pair logic is tested on synthetic
-  traces only — no real trace pool exists yet to build real pairs from.
+  OpenAI-compatible client (GPT-5.5). A real 200-sample pilot batch against
+  `d5ma00154d1_suppl.csv` (via `pilot_batch_driver.py`) succeeded 200/200
+  with 0 API errors: mean grounding score 0.994, 86% of traces fully
+  grounded, 5,259 claims checked. Getting there required manually reading
+  failing claims (not trusting the aggregate score) and fixing several real
+  grounding-checker bugs along the way — see "Bugs found and fixed" in
+  README.md.
+- **Stage 2/3 (grounded ORPO): VALIDATED on real data at small scale.**
+  `orpo_trace_pool.py` generates real grounded + shortcut (tool-withheld)
+  completions and builds preference pairs via `orpo_pair_construction.py`.
+  A real n=30 run (120 LLM calls, 0 errors) produced 60 pairs across 4
+  types (`same_answer`, `standard`, `anti_shortcut`, `standard_fallback`),
+  with 97% of prompts showing genuine reasoning-quality diversity between
+  the grounded and shortcut completions. **Not yet scaled to the full
+  warm-trace set.**
 - **Stage 4 (staged GRPO reward): SCAFFOLDED, not runnable yet.**
   `staged_grpo_rewards.py`'s reward functions are tested on synthetic
   examples. `call_prm_judge()` is an unimplemented stub — needed for Stage
@@ -44,12 +52,12 @@ Full roadmap (5 stages):
 - **No training has been run.** No SFT, ORPO, or GRPO training has been
   executed. Everything above is data/reward pipeline scaffolding.
 
-**Immediate next step:** run a real pilot batch via `pilot_batch_driver.py`
-against the actual silkome dataset (see "Known gaps" below — the dataset
-column mapping hasn't been validated against the real file yet), read the
-real hallucination-rate audit summary, and decide whether the
-trace-generation prompt needs iteration before generating the full
-warm-trace set.
+**Immediate next step:** scale `orpo_trace_pool.py` from the validated n=30
+run to the full warm-trace set to build the real ORPO training data, then:
+wire and validate `call_prm_judge()` (currently an unimplemented stub) in
+`staged_grpo_rewards.py` against held-out human/independent-model labels,
+then run the first real training pass (no SFT/ORPO/GRPO training has been
+executed yet — everything above is a validated but untrained pipeline).
 
 ## Setup
 
