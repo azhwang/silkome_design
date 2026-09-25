@@ -31,7 +31,7 @@ import sys
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from pilot_batch_driver import load_dataset, _synthetic_demo_dataset, with_retry
 from trace_generation import (
@@ -91,10 +91,15 @@ def generate_scored_pool(
     llm_fn,
     correctness_tolerance: float,
     sleep_between_calls: float = 0.0,
+    only: Optional[Set[Tuple[str, str, int]]] = None,
 ) -> (List[ScoredTrace], List[Dict[str, Any]]):
     """Returns (scored_traces, errors). Skips samples with no ground_truth —
     correctness is undefined without it, and every downstream bucket
     depends on it.
+
+    If `only` is given, generates just those (prompt_id, trace_kind, k)
+    slots and skips everything else — used by --resume-from to backfill
+    calls that failed in an earlier run.
 
     Generates two kinds of completion per prompt: k_samples tool-grounded
     completions (generate_trace_for_sample) and k_shortcut_samples
@@ -125,6 +130,8 @@ def generate_scored_pool(
         prompt_id = f"sample_{i}"
         for trace_kind, gen_fn, n_calls in generators:
             for k in range(n_calls):
+                if only is not None and (prompt_id, trace_kind, k) not in only:
+                    continue
                 try:
                     g: GeneratedTrace = gen_fn(sample, llm_fn=llm_fn)
                 except LLMNotConfiguredError:
@@ -204,6 +211,7 @@ def run_orpo_pair_generation(
     max_pairs_per_prompt: int = 4,
     anti_shortcut_ratio: float = 0.25,
     same_answer_tolerance: float = 0.05,
+    resume_from: Optional[str] = None,
 ) -> None:
     if data_path:
         dataset = load_dataset(data_path)
@@ -222,9 +230,45 @@ def run_orpo_pair_generation(
     base_llm_fn = mock_trace_generator_llm if use_mock else call_trace_generator_llm
     llm_fn = with_retry(base_llm_fn, max_retries=max_retries) if not use_mock else base_llm_fn
 
-    scored, errors = generate_scored_pool(
-        batch, k_samples, k_shortcut_samples, llm_fn, correctness_tolerance, sleep_between_calls
+    previously_scored: List[ScoredTrace] = []
+    only: Optional[Set[Tuple[str, str, int]]] = None
+    if resume_from:
+        prior = json.loads(Path(resume_from).read_text(encoding="utf-8"))
+        if prior["n_prompts_requested"] != len(batch) or prior["k_samples"] != k_samples \
+                or prior["k_shortcut_samples"] != k_shortcut_samples:
+            raise SystemExit(
+                f"--resume-from {resume_from} was generated with n_prompts={prior['n_prompts_requested']}, "
+                f"k_samples={prior['k_samples']}, k_shortcut_samples={prior['k_shortcut_samples']}; this run "
+                f"uses {len(batch)}/{k_samples}/{k_shortcut_samples}. Pass the same --n-prompts/--k-*/--seed/--data-path."
+            )
+        # prompt_id is the index into the seeded batch, so the resumed batch must reproduce the
+        # original one exactly — otherwise new traces would be filed under the wrong sequence.
+        for t in prior["scored_traces"]:
+            idx = int(t["prompt_id"].split("_")[1])
+            if idx >= len(batch) or batch[idx].sequence != t["metadata"]["sequence"]:
+                raise SystemExit(
+                    f"--resume-from {resume_from}: {t['prompt_id']} has a different sequence than this run's "
+                    f"batch. Use the same --seed and --data-path as the original run."
+                )
+        previously_scored = [
+            ScoredTrace(
+                prompt_id=t["prompt_id"],
+                trace_text=t["trace_text"],
+                final_answer=t["final_answer"],
+                is_correct=t["is_correct"],
+                grounding_score=t["grounding_score"],
+                metadata=t["metadata"],
+            )
+            for t in prior["scored_traces"]
+        ]
+        only = {(e["prompt_id"], e["trace_kind"], e["k"]) for e in prior["errors"]}
+        print(f"[run_orpo_pair_generation] resuming: {len(previously_scored)} traces kept, "
+              f"backfilling {len(only)} previously failed calls", file=sys.stderr)
+
+    new_scored, errors = generate_scored_pool(
+        batch, k_samples, k_shortcut_samples, llm_fn, correctness_tolerance, sleep_between_calls, only=only
     )
+    scored = previously_scored + new_scored
 
     diversity = _bucket_diversity_report(scored, grounding_threshold)
 
@@ -314,6 +358,10 @@ def main():
     parser.add_argument("--anti-shortcut-ratio", type=float, default=0.25)
     parser.add_argument("--same-answer-tolerance", type=float, default=0.05,
                          help="Max per-property abs diff to count two predictions as 'the same answer' (default 0.05).")
+    parser.add_argument("--resume-from", type=str, default=None,
+                         help="Path to an earlier run's output JSON: keep its scored traces and regenerate only "
+                              "the calls listed in its 'errors'. Requires the same --data-path/--n-prompts/--k-*/--seed "
+                              "as that run (checked). Pass a different --output to keep the original untouched.")
     parser.add_argument("--use-mock", action="store_true",
                          help="Use the deterministic mock LLM instead of the real client — for testing the driver "
                               "itself. Note: the mock always returns the same completion, so no bucket diversity "
@@ -335,6 +383,7 @@ def main():
         max_pairs_per_prompt=args.max_pairs_per_prompt,
         anti_shortcut_ratio=args.anti_shortcut_ratio,
         same_answer_tolerance=args.same_answer_tolerance,
+        resume_from=args.resume_from,
     )
 
 
