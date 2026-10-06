@@ -7,8 +7,8 @@ ORPO → staged multi-component GRPO):
 ## Real dataset
 
 The real silkome dataset is `d5ma00154d1_suppl.csv` (2,177 MaSp sequences
-with fiber-level mechanical properties — sequence, force_vector, strength,
-toughness, and normalized `strength_norm`/`toughness_norm` in `[0, 1]`),
+with mechanical labels — sequence, force_vector, strength, toughness, and
+normalized `strength_norm`/`toughness_norm` in `[0, 1]`),
 supplementary data from the RSC paper at
 https://pubs.rsc.org/ma/article/6/13/4267/896018. `d5ma00154d2_suppl.csv`
 is the same set with added model predictions. `ALL_SILK_SEQ.csv` (10,449
@@ -16,6 +16,38 @@ sequences, no mechanical properties) is the raw sequence pool from
 [SilkomeGPT](https://github.com/lamm-mit/SilkomeGPT). All three are
 gitignored (large, externally sourced — not ours to redistribute here);
 place them in the repo root to run against real data.
+
+**Label provenance.** `strength` tracks the peak of each row's
+`force_vector` (r = 0.96) and `toughness` its area under the curve
+(r = 0.996), so the labels are derived from force–extension curves —
+consistent with simulated pulling rather than lab fiber tests (confirm
+against the paper's methods before describing them as experimental).
+Toughness is also almost entirely chain length (Spearman 0.97 with
+length), which matters for any model that doesn't account for length.
+
+## Baseline check: do the traces predict?
+
+`python3 llm_vs_regressor_comparison.py` (no API calls) compares the
+n=500 ORPO traces against tool-free regressors (`silk_regressor.py`,
+out-of-fold, cluster-grouped CV) on the same 437 sequences, by Spearman ρ
+vs. the dataset values:
+
+| predictor | strength ρ | toughness ρ |
+|---|---|---|
+| LLM traces, tools given | -0.06 | -0.40 |
+| LLM traces, tools withheld | -0.07 | -0.26 |
+| length only | +0.57 | +0.98 |
+| tool-free regressor | +0.58 | +0.98 |
+
+Findings: the traces carry no usable rank signal for strength and a
+*negative* one for toughness, and predicting the dataset mean has lower
+absolute error than either prompt. Under the pipeline's own "correct"
+definition (mean abs error ≤ 0.1 over both properties) a constant
+dataset-mean guess is correct 93% of the time vs. 8% (tools given) and
+45% (tools withheld) for the LLM, so that label rewards hugging the mean
+rather than reasoning. Grounding (0.994) measures faithfulness to the
+tool outputs, not accuracy. The cause of the negative toughness
+correlation has not been investigated.
 
 `pilot_batch_driver.py`'s `_COLUMN_ALIASES` has been validated against
 `d5ma00154d1_suppl.csv`: the sequence column is `seq`, and ground truth

@@ -6,7 +6,7 @@ A staged pipeline for training a tool-augmented reasoning model to predict
 protein fiber-level mechanical properties from sequence — validated on
 spider silk (the "silkome"), with the goal of a **transferable reasoning
 capability**, not a silk-specific regressor. Silk is the sandbox because it
-has strong domain priors and good experimental data; the deliverable is a
+has strong domain priors and a large labeled dataset; the deliverable is a
 method that should generalize to other protein families.
 
 Full roadmap (5 stages):
@@ -44,6 +44,14 @@ Full roadmap (5 stages):
   with 97% of prompts showing genuine reasoning-quality diversity between
   the grounded and shortcut completions. **Not yet scaled to the full
   warm-trace set.**
+- **Baseline check (`llm_vs_regressor_comparison.py`): traces do NOT predict
+  well.** On 437 sequences from the n=500 run, LLM traces have Spearman
+  -0.06 (strength) / -0.40 (toughness) vs. +0.57 / +0.98 for length alone;
+  predict-the-mean beats them on absolute error; and a constant mean guess
+  is "correct" (error <= 0.1) 93% of the time vs. 8% for tool-grounded
+  traces, so the ORPO correctness label is not informative as defined.
+  Labels derive from force-extension vectors (likely simulated), and
+  toughness is ~entirely chain length. Details in README.md.
 - **Stage 4 (staged GRPO reward): SCAFFOLDED, not runnable yet.**
   `staged_grpo_rewards.py`'s reward functions are tested on synthetic
   examples. `call_prm_judge()` is an unimplemented stub — needed for Stage
@@ -52,9 +60,10 @@ Full roadmap (5 stages):
 - **No training has been run.** No SFT, ORPO, or GRPO training has been
   executed. Everything above is data/reward pipeline scaffolding.
 
-**Immediate next step:** scale `orpo_trace_pool.py` from the validated n=30
-run to the full warm-trace set to build the real ORPO training data, then:
-wire and validate `call_prm_judge()` (currently an unimplemented stub) in
+**Immediate next step:** before scaling `orpo_trace_pool.py` further, make
+the traces predictive and fix the correctness label (see the baseline check
+above) — otherwise ORPO would reinforce faithful-but-uninformative
+reasoning. Then: wire and validate `call_prm_judge()` (currently an unimplemented stub) in
 `staged_grpo_rewards.py` against held-out human/independent-model labels,
 then run the first real training pass (no SFT/ORPO/GRPO training has been
 executed yet — everything above is a validated but untrained pipeline).
