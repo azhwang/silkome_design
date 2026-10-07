@@ -3,3 +3,6 @@
 # decompression). If you find a specific version combination that works
 # reliably in your environment, pin it here and note why.
 openai
+numpy        # md_engine.py / md_analysis.py / md_agent.py
+# Optional: `pip install openmm` makes md_agent.py faster on larger systems
+# (auto-detected; the numpy backend is used otherwise). Validated with openmm 8.6.

@@ -57,6 +57,14 @@ Full roadmap (5 stages):
   examples. `call_prm_judge()` is an unimplemented stub — needed for Stage
   3 of the reward schedule (not to be confused with pipeline Stage 3/ORPO;
   the staged reward schedule's own stages 1-4 are internal to that file).
+- **MD simulation agent (side tool, not a pipeline stage): BUILT, mock-tested.**
+  `md_agent.py` turns a material description into a coarse-grained MD run
+  (`md_engine.py`: HPS protein / bead-spring polymer; numpy + OpenMM
+  backends cross-validated to ~1e-15) and returns properties with error
+  bars (`md_analysis.py`). Validated against known physics; the OpenAI
+  tool-calling loop has only been tested against a fake client, not a
+  live API. CG model has no secondary structure — it is not a
+  strength/toughness predictor. See README.md.
 - **No training has been run.** No SFT, ORPO, or GRPO training has been
   executed. Everything above is data/reward pipeline scaffolding.
 
@@ -87,9 +95,13 @@ your shell before running anything.
 
 ```bash
 # Regression-check every module (each has a __main__ demo/test)
-for f in grounding_checker orpo_pair_construction staged_grpo_rewards bio_tools trace_generation; do
+for f in grounding_checker orpo_pair_construction staged_grpo_rewards bio_tools trace_generation md_analysis; do
   python3 $f.py
 done
+
+# MD engine validation (~7 min here) and MD agent mock demo (~2.5 min)
+python3 md_engine.py
+python3 md_agent.py
 
 # Test the pilot batch driver without a dataset file or API key
 python3 pilot_batch_driver.py --use-mock

@@ -154,6 +154,65 @@ close to the configured `anti_shortcut_ratio=0.25` target. Results are
 saved in `orpo_pairs_n30.json` (gitignored — regenerable, not source of
 truth).
 
+## MD simulation agent (`md_agent.py`, `md_engine.py`, `md_analysis.py`)
+
+A tool-using agent that takes a free-text material description, sets up a
+coarse-grained MD simulation, runs it, and returns molecular-level
+properties with error bars:
+
+```bash
+python3 md_agent.py                                   # mock-policy demo, 2 examples, no key
+python3 md_agent.py "4 chains of GGAGQGGYGGLGSQGAGRGGLGGQGAGAAAAAAAA at 2 mM, 150 mM NaCl" \
+    --use-mock --out report.json
+python3 md_agent.py "<description>"                  # real LLM policy (needs OPENAI_API_KEY)
+python3 md_engine.py                                  # engine validation harness
+python3 md_analysis.py                                # analysis checks vs analytic cases
+```
+
+**Models.** `protein`: HPS (Dignon et al. 2018). One bead per residue,
+Ashbaugh-Hatch hydropathy pairs + Debye-Huckel salt screening, implicit
+solvent, real units. `polymer`: generic bead-spring chain in reduced LJ
+units, with solvent quality set by the attraction strength. **Backends:**
+a dependency-free numpy engine (Verlet list + BAOAB Langevin) and an OpenMM
+backend implementing the same Hamiltonian. `auto` uses OpenMM when it's
+installed.
+
+**Properties:** Rg, end-to-end distance, Ree²/Rg², Flory exponent ν,
+asphericity κ², persistence length, intra/inter-chain contacts (with the
+most frequent residue-pair types), largest-cluster fraction (aggregation),
+COM diffusion (model time), potential energy. Equilibration diagnostics
+(first- vs second-half drift, block SEM, kinetic temperature) drive the
+agent's decision to extend a run.
+
+**Guardrails.** The LLM never supplies numbers or sequences:
+- Reported properties come from `compute_properties`, not from prose.
+- A sequence must be verbatim in the user's description or the reference
+  library (optionally tandem-repeated). An invented sequence is rejected
+  with an error the LLM sees.
+- The final narrative is audited with `grounding_checker.check_trace_grounding`.
+- Total MD steps, beads (5,000) and agent turns are all hard-capped.
+
+**Validation done** (`python3 md_engine.py`):
+- Finite-difference forces (~1e-7 relative error).
+- numpy vs OpenMM energies and forces (~1e-15, i.e. the same Hamiltonian).
+- Ideal-chain ⟨Ree²⟩ = (N−1)⟨b²⟩ and equipartition on both backends.
+- Poor-solvent collapse.
+- Salt screening of poly-Glu (Rg 3.2 nm at 5 mM vs 2.0 nm at 1 M).
+
+The mock agent end to end, plus the error paths (invented sequence,
+budget, bad fields), have been exercised. The OpenAI tool-calling loop has
+only been tested against a fake client, **not a live API**.
+
+**Limits — read before using results for silk mechanics:**
+- One bead per residue means no β-sheet nanocrystals and no H-bonds, so
+  this does not predict fiber strength or toughness.
+- HPS-KR is known to over-compact many IDPs. The synthetic MaSp repeat comes
+  out compact (ν ≈ 0.32), so trust trends across sequences and conditions
+  more than absolute values.
+- Langevin dynamics are model time.
+- Throughput in this container: about 0.6 ms/step for a 105-bead chain.
+  100k steps (1 ns) takes about 1 min.
+
 ## What's real vs. stubbed
 
 Everything runs standalone and has been tested (`python3 <file>.py` in each
