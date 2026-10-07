@@ -197,7 +197,7 @@ agent's decision to extend a run.
 - numpy vs OpenMM energies and forces (~1e-15, i.e. the same Hamiltonian).
 - Ideal-chain ⟨Ree²⟩ = (N−1)⟨b²⟩ and equipartition on both backends.
 - Poor-solvent collapse.
-- Salt screening of poly-Glu (Rg 3.2 nm at 5 mM vs 2.0 nm at 1 M).
+- Salt screening of poly-Glu (Rg 3.6 nm at 5 mM vs 2.2 nm at 1 M; values vary run to run).
 
 The mock agent end to end, plus the error paths (invented sequence,
 budget, bad fields), have been exercised. The OpenAI tool-calling loop has
