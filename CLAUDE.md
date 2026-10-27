@@ -57,10 +57,32 @@ Full roadmap (5 stages):
   examples. `call_prm_judge()` is an unimplemented stub — needed for Stage
   3 of the reward schedule (not to be confused with pipeline Stage 3/ORPO;
   the staged reward schedule's own stages 1-4 are internal to that file).
+- **Thesis Aim 2 (self-assembling peptide networks): STARTED.**
+  `aim2_peptide_networks/` holds the evaluation floor and dataset
+  feasibility check — see that directory's README. Three dependency-free
+  modules, all self-checking: `dataset_schema.py` (canonical records with
+  mandatory measurement conditions + a heterogeneity audit that returns a
+  go/marginal/no-go verdict on holdout feasibility), `identity_holdout.py`
+  (identity-based partition with a verified no-leakage guarantee), and
+  `baselines.py` (reports that refuse a bare score, plus a
+  constant-guess audit that generalises the C.6 finding). **No corpus has
+  been compiled yet** — the audit has only been run on a synthetic demo.
 - **No training has been run.** No SFT, ORPO, or GRPO training has been
   executed. Everything above is data/reward pipeline scaffolding.
 
-**Immediate next step:** before scaling `orpo_trace_pool.py` further, make
+**Relation to the thesis proposal.** The three aims are: Aim 1 (FGF-receptor
+binding, complete, manuscript under internal review), Aim 2 (peptide network
+mechanics — `aim2_peptide_networks/`), and Aim 3 (silk molecule-to-fiber,
+which the original pipeline in this repo serves). The agent/tooling layer
+(`bio_tools.py`, `grounding_checker.py`, `trace_generation.py`) is shared
+across Aims 2 and 3 — extend it in place rather than forking it per aim.
+
+**Immediate next step (Aim 2):** compile the peptide gelation + rheology
+corpus and run `heterogeneity_report()` on it. That returns a go/no-go on
+the aim's own stated top risk (data too sparse or heterogeneous to support
+a holdout) and is a prerequisite for everything downstream of it.
+
+**Immediate next step (Aim 3 / silk pipeline):** before scaling `orpo_trace_pool.py` further, make
 the traces predictive and fix the correctness label (see the baseline check
 above) — otherwise ORPO would reinforce faithful-but-uninformative
 reasoning. Then: wire and validate `call_prm_judge()` (currently an unimplemented stub) in
