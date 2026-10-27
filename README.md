@@ -20,10 +20,14 @@ place them in the repo root to run against real data.
 **Label provenance.** `strength` tracks the peak of each row's
 `force_vector` (r = 0.96) and `toughness` its area under the curve
 (r = 0.996), so the labels are derived from force–extension curves —
-consistent with simulated pulling rather than lab fiber tests (confirm
-against the paper's methods before describing them as experimental).
-Toughness is also almost entirely chain length (Spearman 0.97 with
-length), which matters for any model that doesn't account for length.
+consistent with simulated pulling rather than lab fiber tests. **Confirmed
+by the authors (Wei Lu, Oct 2026):** each fragment is a single chain pulled
+in implicit-solvent MD (NAMD, 0.1 Å/ps, 1.0 kcal/mol/Å² spring, to 3.6 Å per
+residue); force is in pN, strength is the peak force and toughness the area
+under the curve. Toughness is almost entirely chain length (Spearman 0.97
+with length), and across 185 species these molecular labels do not
+correlate with measured fiber mechanics — see `analyses/README.md` for the
+full label audit, including the measured Spider Silkome data.
 
 ## Baseline check: do the traces predict?
 

@@ -52,6 +52,40 @@ Full roadmap (5 stages):
   traces, so the ORPO correctness label is not informative as defined.
   Labels derive from force-extension vectors (likely simulated), and
   toughness is ~entirely chain length. Details in README.md.
+- **Label audit (Sep–Oct 2026): neither dataset supports a sequence-only
+  fiber-mechanics target as-is.** Details and scripts in `analyses/README.md`.
+  - *Simulated labels* (`d5ma00154d1_suppl.csv`, Lu & Buehler 2025; setup
+    confirmed by Wei Lu): single chains, implicit solvent, pulled at
+    0.1 Å/ps to 3.6 Å/residue; force in pN. Strength is mostly the final
+    backbone stretch, toughness scales with length. On held-out sequence
+    clusters length gives R² 0.97 (toughness) / 0.22 (strength), composition
+    lifts strength to 0.32; ESM-2, contact-map and curve-shape features add
+    nothing (`silk_regressor.py`, `silk_attribution.py`, `analyses/`).
+    The d2 `pre_*` columns are SilkomeGPT predictions made from the
+    fragments, not measurements.
+  - *Measured fibers* (Spider Silkome, `silkome_download.py` →
+    `silkome_fiber_model.py`): 446 samples / 296 species. Strength and
+    modulus vary as much between individuals as between genera; only strain
+    (and supercontraction) has species-level signal. Held-out-genus R² ≈ 0
+    except strain 0.15, matched by family alone.
+  - *MD vs. fiber*: 76% of MD fragments are exact substrings of Silkome
+    genes; across 185 species no MD measure correlates with any fiber
+    property (`analyses/md_vs_fiber.py`).
+  - *Provenance* (authors' files, `analyses/md_provenance.py`): 1,025 MD
+    fragments are natural and 1,152 SilkomeGPT-generated; only ~10% lie
+    mostly inside the repeat region. The null holds under the paper's own
+    property assignment (226 measured samples, all |ρ| ≤ 0.10).
+  - *Arakawa et al. motif screen*: their supercontraction–poly-Ala result
+    replicates; the MaSp1 toughness motifs (YGQGG, r = 0.55) do not reproduce
+    from public sequences, traced to paralog labeling (repeat-based groups
+    vs. the database's terminal-domain labels).
+- **Stage A sequence-reading curriculum: BUILT.**
+  `sequence_reading_curriculum.py` generates ~12k genus-split tasks
+  (poly-Ala spans, crystalline blocks, motif counts, composition,
+  comparisons) with exact gold answers and a field-level checker usable as a
+  verifiable reward. A non-reading baseline scores 0.04–0.10 on the block
+  and composition tasks. No model has been evaluated or trained on it yet
+  (`--eval-llm N` makes real API calls).
 - **Stage 4 (staged GRPO reward): SCAFFOLDED, not runnable yet.**
   `staged_grpo_rewards.py`'s reward functions are tested on synthetic
   examples. `call_prm_judge()` is an unimplemented stub — needed for Stage
@@ -60,13 +94,19 @@ Full roadmap (5 stages):
 - **No training has been run.** No SFT, ORPO, or GRPO training has been
   executed. Everything above is data/reward pipeline scaffolding.
 
-**Immediate next step:** before scaling `orpo_trace_pool.py` further, make
-the traces predictive and fix the correctness label (see the baseline check
-above) — otherwise ORPO would reinforce faithful-but-uninformative
-reasoning. Then: wire and validate `call_prm_judge()` (currently an unimplemented stub) in
-`staged_grpo_rewards.py` against held-out human/independent-model labels,
-then run the first real training pass (no SFT/ORPO/GRPO training has been
-executed yet — everything above is a validated but untrained pipeline).
+**Immediate next steps:** the goal is an end-to-end model that predicts
+properties from sequence alone (no tools at inference), trained in stages:
+A (sequence reading — built), B (mechanism pairs), C (calibrated property
+prediction). The bottleneck is labels that sequence can explain, so:
+1. Decide the target definition with the PI: intrinsic properties under a
+   reference process (recommended) vs. natural-dragline ranges.
+2. Scope the multi-chain simulation benchmark with the lab's MD group
+   (`docs/multichain_benchmark_spec.md`) — the labels for stages B and C.
+3. Request the gene-to-paralog/group table behind the Arakawa et al. motif
+   screen from the Silkome authors.
+4. Evaluate a frontier-model baseline on the stage A test split, then train
+   on it. Do not scale `orpo_trace_pool.py` on the current labels — a
+   constant mean guess is "correct" 93% of the time under its definition.
 
 ## Setup
 
@@ -90,6 +130,18 @@ your shell before running anything.
 for f in grounding_checker orpo_pair_construction staged_grpo_rewards bio_tools trace_generation; do
   python3 $f.py
 done
+
+# Measured-fiber data (one-time download from spider-silkome.org, ~15 min, cached)
+python3 silkome_download.py
+python3 silkome_fiber_model.py        # held-out-genus models
+
+# Tool-free baselines on the simulated labels
+python3 silk_regressor.py             # add --esm-model facebook/esm2_t12_35M_UR50D for ESM
+
+# Stage A sequence-reading curriculum (needs silkome_data/)
+python3 sequence_reading_curriculum.py
+
+# One-off analyses behind the findings: see analyses/README.md
 
 # Test the pilot batch driver without a dataset file or API key
 python3 pilot_batch_driver.py --use-mock

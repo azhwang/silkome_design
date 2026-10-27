@@ -25,3 +25,17 @@ d5ma00154d2_suppl.csv
 # Editor
 .vscode/
 .idea/
+
+# Downloaded / derived data and caches — regenerable (silkome_download.py,
+# silk_regressor.py --esm-model, sequence_reading_curriculum.py)
+silkome_data/
+embeddings/
+curriculum/
+
+# Analysis result dumps — regenerable from the scripts that write them
+silk_regressor_results*.json
+silk_regressor_results*_oof.csv
+silk_attribution_results.json
+silkome_fiber_results*.json
+llm_vs_regressor_results.json
+analyses/s4_ours_vs_theirs.csv
