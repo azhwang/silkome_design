@@ -65,8 +65,23 @@ Full roadmap (5 stages):
   go/marginal/no-go verdict on holdout feasibility), `identity_holdout.py`
   (identity-based partition with a verified no-leakage guarantee), and
   `baselines.py` (reports that refuse a bare score, plus a
-  constant-guess audit that generalises the C.6 finding). **No corpus has
-  been compiled yet** — the audit has only been run on a synthetic demo.
+  constant-guess audit that generalises the C.6 finding).
+  **Real data is now wired in for link 2 only (aggregation propensity).**
+  `ap_dataset.py` + `ap_model.py` run against 62,159 peptides (length 5-10)
+  with coarse-grained AP labels from
+  `github.com/Zihan-Liu-00/DL_for_Peptide` (Liu et al., Brief. Bioinform.
+  2023). Ridge on 29 `bio_tools` descriptors reaches Spearman 0.910 on a
+  random split and 0.907 on an identity split, beating the trivial and
+  single-covariate baselines on both MAE and rho, with the correctness
+  criterion passing the constant-guess audit (75% vs 42%). Two structural
+  findings: all 10,450 pentapeptides form a *single* identity cluster at
+  threshold 0.6 (combinatorial percolation) while lengths 6-10 are
+  near-singletons; and because of that the identity split holds out zero
+  length-5 peptides, so the two splits are not comparable (the module
+  prints this warning itself). **The AP label is simulation output, not
+  measurement** - it is the chain's intermediate, not the modulus.
+  **No experimental modulus corpus has been compiled yet**;
+  `dataset_schema.py`'s audit has only been run on a synthetic demo.
 - **No training has been run.** No SFT, ORPO, or GRPO training has been
   executed. Everything above is data/reward pipeline scaffolding.
 
@@ -77,10 +92,15 @@ which the original pipeline in this repo serves). The agent/tooling layer
 (`bio_tools.py`, `grounding_checker.py`, `trace_generation.py`) is shared
 across Aims 2 and 3 — extend it in place rather than forking it per aim.
 
-**Immediate next step (Aim 2):** compile the peptide gelation + rheology
-corpus and run `heterogeneity_report()` on it. That returns a go/no-go on
-the aim's own stated top risk (data too sparse or heterogeneous to support
-a holdout) and is a prerequisite for everything downstream of it.
+**Immediate next step (Aim 2):** compile the experimental peptide gelation +
+rheology corpus and run `heterogeneity_report()` on it. That returns a
+go/no-go on the aim's own stated top risk (data too sparse or heterogeneous
+to support a holdout) and is a prerequisite for everything downstream of it.
+The AP work above covers link 2 only and does not substitute for it. Known
+leads not yet reachable from this session's network: PMC
+(`pmc.ncbi.nlm.nih.gov`), Springer supplementary
+(`static-content.springer.com`) and Zenodo are blocked; `arxiv.org`,
+`figshare.com`, `pubs.rsc.org` and `raw.githubusercontent.com` are allowed.
 
 **Immediate next step (Aim 3 / silk pipeline):** before scaling `orpo_trace_pool.py` further, make
 the traces predictive and fix the correctness label (see the baseline check

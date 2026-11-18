@@ -25,3 +25,6 @@ d5ma00154d2_suppl.csv
 # Editor
 .vscode/
 .idea/
+
+# Third-party datasets are fetched, not committed (see aim2_peptide_networks/ap_dataset.py)
+data/*.csv

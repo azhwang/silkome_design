@@ -3,3 +3,7 @@
 # decompression). If you find a specific version combination that works
 # reliably in your environment, pin it here and note why.
 openai
+
+# Used by aim2_peptide_networks/ap_model.py for the closed-form ridge fit.
+# The rest of aim2_peptide_networks/ is dependency-free by design.
+numpy

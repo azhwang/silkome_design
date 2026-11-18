@@ -115,6 +115,91 @@ leaks pairs at 0.71, 0.86 and 1.00.
 The self-check reconstructs the C.6 failure shape synthetically and confirms all
 three guards fire on it, then shows a genuinely predictive model passing.
 
+## Preliminary analysis on real public data
+
+A real dataset is now wired in — but it serves **link 2 of the chain, not the
+open problem.**
+
+**Source:** Liu et al., *Briefings in Bioinformatics* 24(6), bbad409 (2023),
+data file `Sequential_Peptides/collection_of_peptide_data.csv` from
+[Zihan-Liu-00/DL_for_Peptide](https://github.com/Zihan-Liu-00/DL_for_Peptide).
+62,159 peptides of length 5–10, each labelled with coarse-grained
+aggregation propensity (AP). AP range 0.993–2.619; 8.8% exceed the classical
+AP > 2 self-assembly cutoff.
+
+**The label is simulation output, not measurement.** A model that predicts AP
+is emulating a Martini/GROMACS coarse-grained simulator. That is worth
+knowing — it is the chain's intermediate — but it is not evidence about
+network modulus, and no claim about experimental behaviour should rest on it.
+The data is fetched, not committed (`.gitignore`); `ap_dataset.py` prints the
+exact `curl` command if it is missing.
+
+### Finding 1 — the library percolates at length 5, and nowhere else
+
+Exact per-length identity-cluster structure (masked-bucket clustering; a
+*lower bound* on linkage, since indels can only merge clusters further):
+
+| len | n | clusters @ 0.6 | largest | % in largest |
+|---|---|---|---|---|
+| 5 | 10,450 | **1** | **10,450** | **100%** |
+| 6 | 9,713 | 5,739 | 65 | 0.7% |
+| 7 | 9,644 | 9,333 | 4 | 0.0% |
+| 8 | 9,892 | 9,036 | 5 | 0.1% |
+| 9 | 9,656 | 9,614 | 2 | 0.0% |
+| 10 | 12,804 | 12,598 | 3 | 0.0% |
+
+Every pentapeptide in the corpus collapses into a **single** identity cluster,
+while lengths 6–10 are essentially all singletons. This is the combinatorial
+percolation effect: at length 5 each peptide has C(5,2)·19² = 3,610 neighbours
+within 2 substitutions, and at this sampling density that is far above the
+connectivity threshold. At length 10 the same calculation falls off a cliff.
+
+**Consequence:** an identity holdout cannot divide the pentapeptides at all —
+they must be assigned whole. Lengths 6–10 have so little near-duplicate
+structure that an identity split and a random split are nearly the same thing.
+The split discipline matters exactly where density is high, and here that is
+one length class.
+
+### Finding 2 — descriptors predict AP well, and beat both baselines
+
+Ridge regression on 29 `bio_tools` descriptors (hydropathy, charge,
+Chou-Fasman propensities, composition), 80/20 split:
+
+| split | predictor | ρ | MAE | RMSE |
+|---|---|---|---|---|
+| random | **ridge (descriptors)** | **0.910** | **0.0716** | 0.0939 |
+| random | trivial | n/a | 0.1617 | 0.2138 |
+| random | hydropathy alone | 0.346 | 0.1521 | 0.1991 |
+| identity-0.60 | **ridge (descriptors)** | **0.907** | **0.0652** | 0.0845 |
+| identity-0.60 | trivial | n/a | 0.1433 | 0.1890 |
+| identity-0.60 | hydropathy alone | 0.363 | 0.1344 | 0.1754 |
+
+The model beats every supplied baseline on both MAE and ρ, and the
+correctness criterion passes the constant-guess audit (75.2% model vs 41.8%
+for the best possible constant) — i.e. **this criterion is informative**,
+unlike the silk one. Mean hydropathy dominates the fitted weights (1.01
+standardised, next largest 0.33 for arginine fraction), which is the
+physically expected answer and a useful sanity check on the descriptors.
+
+Per-length accuracy is flat (ρ 0.92–0.94 across lengths 5–10), so the model is
+not quietly working on one subpopulation only.
+
+### Finding 3 — the two splits are not comparable, and the module says so
+
+The identity split forces all 10,450 pentapeptides into train, so the
+held-out set contains **zero** length-5 peptides. The random and identity
+numbers above therefore describe different populations, and `ap_model.py`
+prints an explicit warning rather than letting them sit side by side as if
+they were a clean comparison. Read each against its own baselines.
+
+### What this does and does not license
+
+It establishes that the descriptor → AP link is strongly learnable, cheaply,
+and that a composed chain calling a coarse-grained simulator for this step has
+a real bar to clear: ρ ≈ 0.91 from a linear fit on nine physical descriptors
+plus composition. It says nothing yet about fiber morphology or modulus, which
+is where the aim's actual difficulty lives.
+
 ## What is deliberately *not* here
 
 - **No embedding baseline implementation.** It needs a model this repo does not
