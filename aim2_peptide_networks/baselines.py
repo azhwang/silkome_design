@@ -350,6 +350,215 @@ def criterion_informativeness(
 
 
 # ---------------------------------------------------------------------------
+# Binary classification (the gelation branch)
+# ---------------------------------------------------------------------------
+
+class MajorityBaseline:
+    """Predict the training set's most common class for everything.
+
+    The classification counterpart of `TrivialBaseline`, and the one that
+    matters most on gelation data: published peptide gelation sets are
+    deliberately enriched in gelators, so majority-class accuracy is often
+    high enough that a model can look respectable while having learned
+    nothing. Reporting accuracy without this number beside it is the C.6
+    mistake in classification dress.
+    """
+
+    def __init__(self) -> None:
+        self.majority: Optional[int] = None
+        self.rate: Optional[float] = None
+
+    def fit(self, y_train: Sequence[int]) -> "MajorityBaseline":
+        if not y_train:
+            raise BaselineError("cannot fit a majority baseline on no data")
+        counts: Dict[int, int] = {}
+        for label in y_train:
+            counts[int(label)] = counts.get(int(label), 0) + 1
+        self.majority = max(counts, key=lambda k: counts[k])
+        self.rate = counts[self.majority] / len(y_train)
+        return self
+
+    def predict(self, n: int) -> List[float]:
+        if self.majority is None:
+            raise BaselineError("fit() before predict()")
+        return [float(self.majority)] * n
+
+
+def roc_auc(y_true: Sequence[int], scores: Sequence[float]) -> Optional[float]:
+    """AUC via the rank-sum identity, with ties credited a half.
+
+    None when one class is absent, because AUC is undefined then rather
+    than 0.5 — the same reasoning as `pearson` returning None for a
+    constant predictor.
+    """
+    _check_pair(y_true, scores)
+    positives = [s for label, s in zip(y_true, scores) if int(label) == 1]
+    negatives = [s for label, s in zip(y_true, scores) if int(label) != 1]
+    if not positives or not negatives:
+        return None
+    ranks = rankdata(list(scores))
+    positive_rank_sum = sum(
+        rank for label, rank in zip(y_true, ranks) if int(label) == 1
+    )
+    n_pos, n_neg = len(positives), len(negatives)
+    return (positive_rank_sum - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
+
+
+def accuracy(y_true: Sequence[int], y_pred: Sequence[float]) -> float:
+    _check_pair(y_true, y_pred)
+    return sum(
+        1 for t, p in zip(y_true, y_pred) if int(t) == int(round(float(p)))
+    ) / len(y_true)
+
+
+def balanced_accuracy(y_true: Sequence[int], y_pred: Sequence[float]) -> Optional[float]:
+    """Mean of per-class recall; None if a class is absent from the truth.
+
+    On an enriched gelation set this is the number that moves when a model
+    is merely predicting the majority, and plain accuracy is the number
+    that does not.
+    """
+    _check_pair(y_true, y_pred)
+    per_class: Dict[int, List[int]] = {}
+    for truth, prediction in zip(y_true, y_pred):
+        per_class.setdefault(int(truth), []).append(
+            1 if int(truth) == int(round(float(prediction))) else 0
+        )
+    if len(per_class) < 2:
+        return None
+    return sum(
+        sum(hits) / len(hits) for hits in per_class.values()
+    ) / len(per_class)
+
+
+@dataclass
+class BinaryMetricRow:
+    name: str
+    auc: Optional[float]
+    accuracy: float
+    balanced_accuracy: Optional[float]
+    is_baseline: bool = False
+
+
+@dataclass
+class BinaryEvaluationReport:
+    target: str
+    n_test: int
+    positive_rate: float
+    rows: List[BinaryMetricRow]
+    missing_required_baselines: List[str] = field(default_factory=list)
+
+    def row(self, name: str) -> Optional[BinaryMetricRow]:
+        for candidate in self.rows:
+            if candidate.name == name:
+                return candidate
+        return None
+
+    def beats_all_baselines(self, model_name: str) -> Optional[bool]:
+        """True only if the model beats every baseline on balanced accuracy.
+
+        Balanced accuracy rather than accuracy, deliberately: on an enriched
+        set a majority predictor can win on accuracy while being useless, so
+        testing against accuracy would let the wrong model through.
+        """
+        model = self.row(model_name)
+        if model is None or model.balanced_accuracy is None:
+            return None
+        for other in self.rows:
+            if other.is_baseline and other.balanced_accuracy is not None:
+                if other.balanced_accuracy >= model.balanced_accuracy:
+                    return False
+        return True
+
+    def summary(self, model_name: Optional[str] = None) -> str:
+        lines = [
+            f"Evaluation: {self.target}  (n = {self.n_test} held-out, "
+            f"{self.positive_rate:.1%} positive)",
+            "=" * 76,
+            f"{'predictor':<34} {'AUC':>8} {'acc':>9} {'balanced acc':>14}",
+            "-" * 76,
+        ]
+        for row in self.rows:
+            auc = "     n/a" if row.auc is None else f"{row.auc:8.3f}"
+            bal = ("          n/a" if row.balanced_accuracy is None
+                   else f"{row.balanced_accuracy:13.3f}")
+            tag = "  [baseline]" if row.is_baseline else ""
+            lines.append(
+                f"{row.name + tag:<34} {auc} {row.accuracy:9.3f} {bal}"
+            )
+
+        if self.missing_required_baselines:
+            lines.append("")
+            lines.append(
+                "!! REQUIRED BASELINE NOT SUPPLIED: "
+                + ", ".join(self.missing_required_baselines)
+            )
+
+        if model_name is not None:
+            lines.append("")
+            verdict = self.beats_all_baselines(model_name)
+            if verdict is True:
+                lines.append(
+                    f"VERDICT: {model_name} beats every supplied baseline on "
+                    "balanced accuracy."
+                )
+            elif verdict is False:
+                lines.append(
+                    f"VERDICT: {model_name} does NOT beat every supplied "
+                    "baseline on balanced accuracy."
+                )
+            else:
+                lines.append(f"VERDICT: cannot be determined for {model_name!r}.")
+        return "\n".join(lines)
+
+
+def evaluate_binary(
+    target: str,
+    y_true: Sequence[int],
+    predictions: Dict[str, Sequence[float]],
+    baselines: Optional[Dict[str, Sequence[float]]] = None,
+    scores: Optional[Dict[str, Sequence[float]]] = None,
+    required_baselines: Sequence[str] = ("majority",),
+) -> BinaryEvaluationReport:
+    """Score binary predictors against the truth, always beside baselines.
+
+    `scores` supplies continuous scores for AUC where the hard predictions
+    in `predictions` are thresholded; a predictor with no score entry gets
+    AUC from its hard predictions, which is correct but coarse.
+    """
+    if not predictions:
+        raise BaselineError("nothing to evaluate")
+    baselines = dict(baselines or {})
+    if not baselines:
+        raise BaselineError(
+            "no baselines supplied; an accuracy without a majority-class "
+            "baseline is not interpretable (see proposal C.6)"
+        )
+    scores = dict(scores or {})
+
+    rows: List[BinaryMetricRow] = []
+    for name, y_pred in list(predictions.items()) + list(baselines.items()):
+        _check_pair(y_true, y_pred)
+        rows.append(BinaryMetricRow(
+            name=name,
+            auc=roc_auc(y_true, scores.get(name, y_pred)),
+            accuracy=accuracy(y_true, y_pred),
+            balanced_accuracy=balanced_accuracy(y_true, y_pred),
+            is_baseline=name in baselines,
+        ))
+
+    return BinaryEvaluationReport(
+        target=target,
+        n_test=len(y_true),
+        positive_rate=sum(1 for t in y_true if int(t) == 1) / len(y_true),
+        rows=rows,
+        missing_required_baselines=[
+            name for name in required_baselines if name not in baselines
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
 # Reporting
 # ---------------------------------------------------------------------------
 
@@ -591,6 +800,19 @@ def _run_demo() -> None:
         print(f"  refused: {exc}")
     else:
         raise AssertionError("evaluate() should refuse to report without a baseline")
+
+    print()
+    print("--- binary metrics ---")
+    assert roc_auc([1, 1, 0, 0], [0.9, 0.8, 0.2, 0.1]) == 1.0
+    assert roc_auc([1, 1, 0, 0], [0.1, 0.2, 0.8, 0.9]) == 0.0
+    assert roc_auc([1, 1, 1], [0.5, 0.6, 0.7]) is None
+    print("  AUC on perfect / reversed / single-class -> OK")
+    # Balanced accuracy must punish a majority predictor; accuracy must not.
+    truth = [1] * 8 + [0] * 2
+    majority = [1] * 10
+    assert accuracy(truth, majority) == 0.8
+    assert balanced_accuracy(truth, majority) == 0.5
+    print("  majority predictor: accuracy 0.80 but balanced accuracy 0.50 -> OK")
 
     print()
     print("--- the C.6 failure shape, caught ---")

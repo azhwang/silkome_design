@@ -200,6 +200,81 @@ a real bar to clear: ρ ≈ 0.91 from a linear fit on nine physical descriptors
 plus composition. It says nothing yet about fiber morphology or modulus, which
 is where the aim's actual difficulty lives.
 
+## Experimental data: Xu et al. 2023 (`xu2023_gelation.py`)
+
+The first **experimentally measured** dataset in the project. 165 synthesised
+tetrapeptides from [Nature Communications 14, 3880
+(2023)](https://doi.org/10.1038/s41467-023-39648-2), Supplementary Data 7:
+observed state (gel 100 / sol 30 / suspension 28 / precipitate 7), TEM
+morphology (13 classes), recorded concentration, and the authors' computed
+APH/APHC ranks. This covers the chain's **gelation** node (the positive
+control) and its **fiber morphology** node. It carries no modulus.
+
+### Finding 4 — concentration is label-determined, and it is a trap
+
+| state | 30 mM | 60 mM | 90 mM | 120 mM |
+|---|---|---|---|---|
+| gel | 46 | 30 | 6 | 18 |
+| non-gel | 0 | 0 | 0 | 65 |
+
+The protocol escalates: test at 30 mM, record a gel if one forms, otherwise
+retry higher, and record the final state at 120 mM. So `concentration < 120`
+implies gel with **perfect precision — 82 of 82, zero false positives** — and
+reaches 89.1% accuracy against a 60.6% majority baseline, using a column that
+only has its value because the outcome was already known.
+
+Handing it to the model does exactly what you'd expect:
+
+| features | accuracy | balanced | AUC |
+|---|---|---|---|
+| descriptors only | 0.697 | 0.680 | 0.703 |
+| **+ concentration (leaky)** | 0.806 | 0.800 | **0.902** |
+
+`protocol_escalation_report()` detects this generically — it tests for
+*one-sided* precision rather than high accuracy, because a genuinely
+predictive covariate errs in both directions while a label-determined one
+cannot. This matters beyond this dataset: escalation is standard practice in
+the gelation literature, so any corpus compiled per `dataset_schema.py` will
+likely contain it, and it qualifies that module's treatment of concentration
+as "a covariate the chain should reason about" — right for an independently
+set concentration, badly wrong for an escalated one.
+
+### Finding 5 — descriptors are much weaker on experiment than on simulation
+
+Identity-grouped 5-fold out-of-fold, logistic regression on the same 29
+descriptors:
+
+| target | model | AUC | balanced acc |
+|---|---|---|---|
+| gelation | logistic (descriptors) | 0.703 | 0.680 |
+| gelation | majority | 0.500 | 0.500 |
+| gelation | authors' APHC rank | 0.926 | 0.821 |
+| fibrous morphology | logistic (descriptors) | 0.568 | 0.544 |
+| fibrous morphology | majority | 0.500 | 0.500 |
+| fibrous morphology | authors' APHC rank | 0.753 | 0.690 |
+
+Set against Finding 2 (ρ = 0.910 predicting simulated AP), this is the
+informative contrast: **descriptors reproduce the simulator's output almost
+perfectly but predict the experiment only modestly.** The coarse-grained step
+is not redundant with cheap descriptors where it actually matters. Fibrous
+morphology — the intermediate the proposal's feasibility argument leans on —
+is the harder of the two, barely above chance from descriptors alone.
+
+**The APHC comparison is not fair, and the module says so.** These 165
+peptides were *selected* by that score, enriched at both ends of its ranking,
+so its separation here is inflated by the selection and is an upper bound on
+its performance on randomly drawn tetrapeptides. Treat the gap as an
+unresolved comparison, not a measured defeat.
+
+### Finding 6 — near-duplicate structure is present but costs little here
+
+The 165 form 80 identity clusters at threshold 0.6, with the largest holding
+56 peptides (34% of the set) — they are single-substitution families around
+top-ranked sequences, not a random sample. Yet random folds inflate AUC by
+only **+0.016** over identity-grouped folds. The structural leak is real; for
+a linear model it barely bites. A higher-capacity model that can memorise
+families would likely show a much larger gap, so the grouping stays.
+
 ## What is deliberately *not* here
 
 - **No embedding baseline implementation.** It needs a model this repo does not

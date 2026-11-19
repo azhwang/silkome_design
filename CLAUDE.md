@@ -80,8 +80,32 @@ Full roadmap (5 stages):
   length-5 peptides, so the two splits are not comparable (the module
   prints this warning itself). **The AP label is simulation output, not
   measurement** - it is the chain's intermediate, not the modulus.
+  **Experimental data is now wired in for the gelation + morphology nodes.**
+  `xu2023_gelation.py` loads Xu et al., Nat. Commun. 14, 3880 (2023)
+  Supplementary Data 7: 165 synthesised tetrapeptides with observed state
+  (60.6% gel), TEM morphology and the authors' APH/APHC ranks. Results
+  (identity-grouped 5-fold OOF, logistic on the same 29 descriptors):
+  gelation AUC 0.703 / balanced 0.680; fibrous morphology AUC 0.568 /
+  balanced 0.544; majority baseline 0.500 on both. The informative
+  contrast with the AP result above: descriptors reproduce the
+  *simulator's* output almost perfectly (rho 0.910) but predict the
+  *experiment* only modestly, so the coarse-grained step is not redundant
+  with cheap descriptors where it matters.
+  **Critical data trap found: `concentration_mM` is label-determined.**
+  The protocol escalates 30 -> 60 -> 90 -> 120 mM until gelation, so every
+  non-gel sits at 120 mM and "concentration < 120 => gel" holds 82/82 with
+  zero false positives (89.1% accuracy vs 60.6% majority). Feeding it to
+  the model lifts AUC 0.703 -> 0.902 while learning nothing.
+  `protocol_escalation_report()` detects this generically (tests for
+  one-sided precision, not high accuracy); escalation is standard in the
+  gelation literature, so expect it in any compiled corpus. This qualifies
+  `dataset_schema.py`'s treatment of concentration as a covariate - right
+  for an independently set concentration, wrong for an escalated one.
+  The authors' APHC baseline scores higher (AUC 0.926) but is NOT a fair
+  comparator: the 165 peptides were selected by that very score.
   **No experimental modulus corpus has been compiled yet**;
-  `dataset_schema.py`'s audit has only been run on a synthetic demo.
+  `dataset_schema.py`'s audit returns its no-go verdict on this data,
+  correctly, because it contains no mechanics.
 - **No training has been run.** No SFT, ORPO, or GRPO training has been
   executed. Everything above is data/reward pipeline scaffolding.
 

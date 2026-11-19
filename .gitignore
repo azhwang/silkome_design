@@ -28,3 +28,4 @@ d5ma00154d2_suppl.csv
 
 # Third-party datasets are fetched, not committed (see aim2_peptide_networks/ap_dataset.py)
 data/*.csv
+data/*.xlsx
