@@ -103,9 +103,34 @@ Full roadmap (5 stages):
   for an independently set concentration, wrong for an escalated one.
   The authors' APHC baseline scores higher (AUC 0.926) but is NOT a fair
   comparator: the 165 peptides were selected by that very score.
-  **No experimental modulus corpus has been compiled yet**;
-  `dataset_schema.py`'s audit returns its no-go verdict on this data,
-  correctly, because it contains no mechanics.
+  **A third corpus is wired in: literature-mined phase data.**
+  `peptideminer_phases.py` loads `lamm-mit/PeptideMiner`'s
+  `phase_data_clean.csv` (Yang et al., arXiv:2411.05421): 1,017 observations
+  with peptide, terminal chemistry, concentration, pH, temperature,
+  incubation and phase (hydrogel 219, fiber 96, none 407, ...). It produced
+  the project's sharpest leakage result: **1,017 rows but only 119 unique
+  sequences**, which at identity 0.6 form 23 clusters with the largest
+  holding 90 (76%). Row-level folds inflate AUC by +0.209 (hydrogel) and
+  +0.357 (fiber) over identity-grouped folds - and for fiber the grouped
+  AUC is exactly 0.500, i.e. the row-level 0.857 was entirely sequence
+  memorisation. Contrast Finding 6 on the Xu data, where grouping cost only
+  0.016 AUC: near-duplicate structure is cheap when a corpus samples
+  sequence space sparsely and ruinous when it re-measures few sequences
+  many times, and only the cluster count distinguishes the two.
+  Also: `protocol_escalation_report()` reports precision 0.272 here and
+  does NOT flag concentration, versus 1.000 on Xu - it separates a genuine
+  experimental variable from a label proxy without being told which is which.
+  **STILL NO MODULUS DATA ANYWHERE.** Three experimental/simulated corpora
+  now cover the chain's gelation and morphology nodes; none carries a
+  mechanical property. Specific dead ends, so they are not re-chased:
+  Simpson et al. 2025 (doi 10.1002/adma.202415031, the proposal's ref 18,
+  the most on-point paper) is open access on PMC but PMC CAPTCHAs automated
+  requests and Wiley is off the allowlist; the Buehler group's
+  arXiv:2505.08850 computes Young's modulus for all 400 dipeptides and all
+  8,000 tripeptides but its cited repo `lamm-mit/PeptideModulus` 404s on
+  every branch; Leeds 10.5518/975 and Montazeri et al. are on blocked
+  hosts; Zenodo/figshare searches return only single-system studies.
+  Getting modulus data is now the binding constraint on Aim 2.
 - **No training has been run.** No SFT, ORPO, or GRPO training has been
   executed. Everything above is data/reward pipeline scaffolding.
 

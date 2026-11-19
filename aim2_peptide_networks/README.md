@@ -275,6 +275,92 @@ only **+0.016** over identity-grouped folds. The structural leak is real; for
 a linear model it barely bites. A higher-capacity model that can memorise
 families would likely show a much larger gap, so the grouping stays.
 
+## Literature-mined phase data (`peptideminer_phases.py`)
+
+The most condition-rich experimental corpus found, and the closest thing yet
+to what `dataset_schema.py` was written to audit: 1,017 observations pooled
+from many publications, each with peptide, terminal chemistry, solvent,
+concentration, pH, temperature, incubation time and resulting phase.
+
+**Source:** Yang, Yorke, Knowles & Buehler, [arXiv:2411.05421](https://arxiv.org/abs/2411.05421),
+`data/phase_data_clean.csv` from [lamm-mit/PeptideMiner](https://github.com/lamm-mit/PeptideMiner).
+Phases: none 407, hydrogel 219, tube 121, fiber 96, vesicle 43, nanosphere 33,
+ribbon 33, particle 16, organogel 5. Still **no modulus**.
+
+### Finding 7 — row counts are not sample sizes, and here the gap is fatal
+
+1,017 rows, **119 unique sequences**, ~8.5 rows per sequence. Worse, those
+119 are di- and tripeptides, which percolate at identity 0.6 exactly as the
+pentapeptides did: **23 clusters, the largest holding 90 (76%)**. The
+effective sample size is ~23 groups dominated by one — not 1,017.
+
+### Finding 8 — the leakage this causes, measured
+
+Same model, same data, same folds count; only the grouping changes:
+
+| target | row-level folds (leaky) | identity-grouped | inflation |
+|---|---|---|---|
+| hydrogel | AUC 0.840 | AUC 0.631 | **+0.209** |
+| fiber | AUC 0.857 | **AUC 0.500** | **+0.357** |
+
+The fiber row is the one to look at. Split by row, the model scores 0.857 and
+looks strong. Split by sequence identity, it scores **exactly chance**. It had
+learned which sequences form fibers, not what makes a sequence form them —
+and nothing in the row-level number reveals that.
+
+Set against Finding 6 (the Xu data, where identity grouping cost only 0.016
+AUC), this is the calibration: near-duplicate structure is cheap when a
+corpus samples sequence space sparsely and ruinous when it re-measures a few
+sequences many times. You cannot tell which case you are in from the row
+count — only from the cluster count.
+
+Sequence descriptors alone reach AUC 0.456 for hydrogel (below chance) and
+0.537 for fiber, so what little signal the grouped model has comes from the
+experimental conditions, not the sequence.
+
+### Finding 9 — concentration is *not* confounded here
+
+The same `protocol_escalation_report()` that fired at precision 1.000 on the
+Xu data reports 0.272 here and declines to flag it. Pooling many independent
+protocols breaks the escalation pattern: concentration is a genuine
+experimental variable in a multi-source corpus and a label proxy in a
+single-protocol one. The detector distinguishes them without being told which
+is which.
+
+### Data-quality flags
+
+Curated partly by LLM literature mining, so extraction errors are expected:
+44 rows carry non-standard residue letters and 6 have temperatures outside
+0–100 °C (the raw column spans −80 to 200 °C — plainly storage and
+lyophilisation conditions attached to the assembly step). `quality_flags()`
+reports both rather than silently dropping them.
+
+## Where the modulus data actually is — and isn't
+
+Searched and came up empty, which is itself a result worth recording:
+
+- **Simpson et al. 2025** ([10.1002/adma.202415031](https://doi.org/10.1002/adma.202415031),
+  the proposal's ref 18) is the single most on-point paper — Bayesian models
+  predicting G′ and G″ for di/tripeptide gels. Open access on PMC, but PMC
+  serves a CAPTCHA to automated requests and Wiley is outside the session's
+  network allowlist. **Not retrieved.**
+- **Buehler group, arXiv:2505.08850** computes Young's modulus for *all* 400
+  dipeptides and *all* 8,000 tripeptides by coarse-grained MD with AFM
+  validation. Its accession code points at `github.com/lamm-mit/PeptideModulus`,
+  which **404s on every branch** — cited but never made public.
+- **Leeds 10.5518/975** (peptide:GAG rheology) and **Montazeri et al.**
+  (70 formulations, frequency-dependent moduli) are both on hosts outside the
+  allowlist.
+- Zenodo and figshare searches for sequence-varied peptide rheology returned
+  only single-system studies: one peptide characterised deeply, which is the
+  literature's normal shape and the opposite of what a sequence→modulus model
+  needs.
+
+**The pattern across every corpus reached: gelation and morphology are
+available; modulus is not.** Three independent datasets now cover the chain's
+upper branch and its morphology node, and none carries the mechanical
+property Aim 2 is actually about.
+
 ## What is deliberately *not* here
 
 - **No embedding baseline implementation.** It needs a model this repo does not

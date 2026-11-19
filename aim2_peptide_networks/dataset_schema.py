@@ -84,19 +84,32 @@ WATER_MASS = 18.0153
 #
 # Values are the net mass change relative to the unmodified free-amine /
 # free-acid terminus.
+# Synonyms are included because real corpora spell these inconsistently
+# ("Free" vs "H", "Acetylation" vs "Ac"). Per CLAUDE.md these are starter
+# vocabularies meant to be extended as new sources are ingested; a name with
+# no entry raises rather than silently scoring as unmodified.
 N_TERM_MODIFICATIONS = {
     "H": 0.0,              # free amine (unmodified)
+    "FREE": 0.0,           # same, as spelled in literature-mined corpora
     "AC": 42.0367,         # acetyl
+    "ACETYLATION": 42.0367,
     "FMOC": 222.2400,      # fluorenylmethyloxycarbonyl
     "NAP": 168.1900,       # naphthalene-2-yl acetyl ("Nap-")
+    "NAPTHALENE": 168.1900,   # source spelling (sic) in PeptideMiner
+    "NAPHTHALENE": 168.1900,
     "CBZ": 134.1300,       # benzyloxycarbonyl
     "BOC": 100.1200,       # tert-butyloxycarbonyl
 }
 
 C_TERM_MODIFICATIONS = {
     "OH": 0.0,             # free acid (unmodified)
+    "FREE": 0.0,
     "NH2": -0.9847,        # primary amide (-OH -> -NH2)
+    "AMIDATION": -0.9847,
     "OME": 14.0266,        # methyl ester
+    "METHOXY": 14.0266,
+    "OBZL": 90.1200,       # benzyl ester
+    "BENZYLATION": 90.1200,
 }
 
 # Modulus units -> multiplier to Pascals.
