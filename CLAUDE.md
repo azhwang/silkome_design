@@ -79,6 +79,17 @@ Full roadmap (5 stages):
     replicates; the MaSp1 toughness motifs (YGQGG, r = 0.55) do not reproduce
     from public sequences, traced to paralog labeling (repeat-based groups
     vs. the database's terminal-domain labels).
+- **Other Silkome properties (Nov 2026; `analyses/other_properties.py`,
+  `supercontraction_validation.py`): they do not rescue a sequence-only
+  target.** Mechanical labels are mostly individual-level noise (species ICC
+  0.13-0.26, ceiling R² 0.18-0.33), so the ~0 held-out-genus R² is close to
+  the achievable ceiling for strength/modulus/toughness. No other measured
+  property (crystallinity, birefringence, diameter, body size, water, thermal
+  loss) is predictable beyond family. Diameter-adjusting strength doubles its
+  species-level ICC (0.13 → 0.25) but it stays unpredictable. Supercontraction
+  looked predictable (R² +0.26) but is a completeness/lineage proxy (carried
+  by non-dragline gene presence; vanishes within Araneidae) — do not use it as
+  evidence that sequence predicts a fiber property.
 - **Stage A sequence-reading curriculum: BUILT.**
   `sequence_reading_curriculum.py` generates ~12k genus-split tasks
   (poly-Ala spans, crystalline blocks, motif counts, composition,

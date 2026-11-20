@@ -1,0 +1,345 @@
+{
+  "n_species": 241,
+  "sweep": [
+    {
+      "target": "log_toughness",
+      "n_species": 227,
+      "ICC": 0.2077372749254853,
+      "n_rep_species": 74,
+      "ceiling_R2": 0.2668916590038866,
+      "family": 0.04309894291717462,
+      "family_sd": 0.019143240285856754,
+      "genes": -0.016369779060708512,
+      "genes_sd": 0.01409528197368931,
+      "motifs": -0.011484874157415037,
+      "motifs_sd": 0.012155341507919672,
+      "genes+motifs": -0.016809469265998266,
+      "genes+motifs_sd": 0.012060693983466023,
+      "family+genes+motifs": -0.012193343697225667,
+      "family+genes+motifs_sd": 0.02625437374018461,
+      "best": 0.04309894291717462,
+      "best_set": "family",
+      "gain_over_family": 0.0
+    },
+    {
+      "target": "log_modulus",
+      "n_species": 227,
+      "ICC": 0.18812271482488224,
+      "n_rep_species": 74,
+      "ceiling_R2": 0.24446237583280164,
+      "family": -0.03902063312260871,
+      "family_sd": 0.024730516814754324,
+      "genes": -0.01975760728179097,
+      "genes_sd": 0.011258908694751105,
+      "motifs": -0.02823418457756941,
+      "motifs_sd": 0.014265327495742596,
+      "genes+motifs": -0.03546746835753813,
+      "genes+motifs_sd": 0.01893301163125293,
+      "family+genes+motifs": -0.03149913680399306,
+      "family+genes+motifs_sd": 0.014869495166178229,
+      "best": -0.01975760728179097,
+      "best_set": "genes",
+      "gain_over_family": 0.019263025840817738
+    },
+    {
+      "target": "log_strength",
+      "n_species": 227,
+      "ICC": 0.13345744876120977,
+      "n_rep_species": 74,
+      "ceiling_R2": 0.17956459556491955,
+      "family": -0.014261681541577254,
+      "family_sd": 0.005997818705040955,
+      "genes": -0.008041726993769992,
+      "genes_sd": 0.0037262133912474155,
+      "motifs": -0.027665196802520154,
+      "motifs_sd": 0.01179508326872873,
+      "genes+motifs": -0.02240312868895833,
+      "genes+motifs_sd": 0.015311711636193293,
+      "family+genes+motifs": -0.015950893629410913,
+      "family+genes+motifs_sd": 0.0047665118097650555,
+      "best": -0.008041726993769992,
+      "best_set": "genes",
+      "gain_over_family": 0.006219954547807261
+    },
+    {
+      "target": "log_strain",
+      "n_species": 227,
+      "ICC": 0.2642550660370873,
+      "n_rep_species": 74,
+      "ceiling_R2": 0.32939988168003725,
+      "family": 0.15034649506794323,
+      "family_sd": 0.02132136468791404,
+      "genes": 0.06317184683690498,
+      "genes_sd": 0.023538916012122567,
+      "motifs": 0.10633133337129572,
+      "motifs_sd": 0.022215297662171608,
+      "genes+motifs": 0.11769801066561966,
+      "genes+motifs_sd": 0.016645217072481518,
+      "family+genes+motifs": 0.14926455208139427,
+      "family+genes+motifs_sd": 0.037868865905161184,
+      "best": 0.15034649506794323,
+      "best_set": "family",
+      "gain_over_family": 0.0
+    },
+    {
+      "target": "crystallinity",
+      "n_species": 159,
+      "ICC": 0.45480273516426856,
+      "n_rep_species": 50,
+      "ceiling_R2": 0.5236356600117809,
+      "family": -0.01696734394536792,
+      "family_sd": 0.016263952751831984,
+      "genes": -0.02884749736002119,
+      "genes_sd": 0.027501310849859458,
+      "motifs": -0.0487922140505991,
+      "motifs_sd": 0.024112221308078833,
+      "genes+motifs": -0.030700218241511257,
+      "genes+motifs_sd": 0.006025394431899434,
+      "family+genes+motifs": -0.02651971087020293,
+      "family+genes+motifs_sd": 0.021235965533656254,
+      "best": -0.01696734394536792,
+      "best_set": "family",
+      "gain_over_family": 0.0
+    },
+    {
+      "target": "birefringence",
+      "n_species": 240,
+      "ICC": 0.27841819812718394,
+      "n_rep_species": 77,
+      "ceiling_R2": 0.3443121231232332,
+      "family": -0.025223183611669996,
+      "family_sd": 0.01279751771855841,
+      "genes": -0.034219331127832,
+      "genes_sd": 0.014121486910735028,
+      "motifs": -0.020136083767314482,
+      "motifs_sd": 0.008019724889717259,
+      "genes+motifs": -0.02307181097008426,
+      "genes+motifs_sd": 0.010591936314899741,
+      "family+genes+motifs": -0.016965745346162242,
+      "family+genes+motifs_sd": 0.009267289858886005,
+      "best": -0.016965745346162242,
+      "best_set": "family+genes+motifs",
+      "gain_over_family": 0.008257438265507754
+    },
+    {
+      "target": "log_diameter",
+      "n_species": 240,
+      "ICC": 0.6698875482173271,
+      "n_rep_species": 77,
+      "ceiling_R2": 0.7199229068382594,
+      "family": 0.08076136707203825,
+      "family_sd": 0.032275664252081955,
+      "genes": 0.0017240103987062217,
+      "genes_sd": 0.04318226374921199,
+      "motifs": -0.007928681935057136,
+      "motifs_sd": 0.025025554907433144,
+      "genes+motifs": 0.0033712644994853937,
+      "genes+motifs_sd": 0.029827280481162226,
+      "family+genes+motifs": 0.04291072664874358,
+      "family+genes+motifs_sd": 0.037865564626541184,
+      "best": 0.08076136707203825,
+      "best_set": "family",
+      "gain_over_family": 0.0
+    },
+    {
+      "target": "log_body_size",
+      "n_species": 203,
+      "ICC": 0.7897819661773474,
+      "n_rep_species": 52,
+      "ceiling_R2": 0.8158831184886806,
+      "family": 0.12586824363974114,
+      "family_sd": 0.02300147225792753,
+      "genes": -0.015539376925751535,
+      "genes_sd": 0.012567193279366909,
+      "motifs": -0.0005896469717848962,
+      "motifs_sd": 0.027856446426542725,
+      "genes+motifs": 0.013264160652995205,
+      "genes+motifs_sd": 0.0339217936989091,
+      "family+genes+motifs": 0.07485566770465409,
+      "family+genes+motifs_sd": 0.019240168874858243,
+      "best": 0.12586824363974114,
+      "best_set": "family",
+      "gain_over_family": 0.0
+    },
+    {
+      "target": "water_content",
+      "n_species": 128,
+      "ICC": 0.2732579301381655,
+      "n_rep_species": 39,
+      "ceiling_R2": 0.33561787516511915,
+      "family": 0.012401229159973281,
+      "family_sd": 0.015857828250342203,
+      "genes": -0.011572953152614507,
+      "genes_sd": 0.035916201753931065,
+      "motifs": -0.04034761375314226,
+      "motifs_sd": 0.039055230907819066,
+      "genes+motifs": -0.02090714714580555,
+      "genes+motifs_sd": 0.03864920271143203,
+      "family+genes+motifs": -0.033231156574346096,
+      "family+genes+motifs_sd": 0.0761784406534612,
+      "best": 0.012401229159973281,
+      "best_set": "family",
+      "gain_over_family": 0.0
+    },
+    {
+      "target": "T_1pct_loss",
+      "n_species": 130,
+      "ICC": 0.06378496483100023,
+      "n_rep_species": 39,
+      "ceiling_R2": 0.0883523140780821,
+      "family": -0.10505012636192346,
+      "family_sd": 0.058406283355064086,
+      "genes": -0.06801577111133077,
+      "genes_sd": 0.04572403679335688,
+      "motifs": -0.04273878661650685,
+      "motifs_sd": 0.025075965793396444,
+      "genes+motifs": -0.06379560718562041,
+      "genes+motifs_sd": 0.025057115697952433,
+      "family+genes+motifs": -0.07904396292674445,
+      "family+genes+motifs_sd": 0.02656853181863711,
+      "best": -0.04273878661650685,
+      "best_set": "motifs",
+      "gain_over_family": 0.062311339745416604
+    },
+    {
+      "target": "T_5pct_loss",
+      "n_species": 130,
+      "ICC": 0.054414094359817936,
+      "n_rep_species": 39,
+      "ceiling_R2": 0.07591765991120539,
+      "family": -0.08124833858196463,
+      "family_sd": 0.0302396838889759,
+      "genes": -0.06874059360368161,
+      "genes_sd": 0.03379260866934389,
+      "motifs": -0.030139004929491908,
+      "motifs_sd": 0.04697326702017302,
+      "genes+motifs": -0.0637256079000473,
+      "genes+motifs_sd": 0.05237416178200297,
+      "family+genes+motifs": -0.04648018187455425,
+      "family+genes+motifs_sd": 0.044278779115414064,
+      "best": -0.030139004929491908,
+      "best_set": "motifs",
+      "gain_over_family": 0.05110933365247272
+    },
+    {
+      "target": "T_10pct_loss",
+      "n_species": 130,
+      "ICC": 0.09477415201122644,
+      "n_rep_species": 39,
+      "ceiling_R2": 0.1283580077566332,
+      "family": -0.07067376793734059,
+      "family_sd": 0.03686744679018595,
+      "genes": -0.06920117432623316,
+      "genes_sd": 0.0341594549450209,
+      "motifs": -0.021283551821356727,
+      "motifs_sd": 0.0320651365771433,
+      "genes+motifs": -0.037729562958714304,
+      "genes+motifs_sd": 0.018208572183148662,
+      "family+genes+motifs": -0.04523843032703874,
+      "family+genes+motifs_sd": 0.022684810947987424,
+      "best": -0.021283551821356727,
+      "best_set": "motifs",
+      "gain_over_family": 0.04939021611598386
+    },
+    {
+      "target": "supercontraction",
+      "n_species": 84,
+      "ICC": 0.7919803410603924,
+      "n_rep_species": 16,
+      "ceiling_R2": 0.809893009666405,
+      "family": 0.061476965932411164,
+      "family_sd": 0.04577997096548473,
+      "genes": 0.16066950532722982,
+      "genes_sd": 0.033784583533868595,
+      "motifs": 0.15781017326901886,
+      "motifs_sd": 0.06371704602644912,
+      "genes+motifs": 0.18314546705889262,
+      "genes+motifs_sd": 0.08258377900082306,
+      "family+genes+motifs": 0.2639696288757909,
+      "family+genes+motifs_sd": 0.037417602251152676,
+      "best": 0.2639696288757909,
+      "best_set": "family+genes+motifs",
+      "gain_over_family": 0.20249266294337973
+    }
+  ],
+  "diameter_adjustment": {
+    "beta": -0.25989734678277576,
+    "p": 0.00028984979002940925,
+    "results": {
+      "raw": {
+        "family": [
+          -0.014261681541577254,
+          0.005997818705040955
+        ],
+        "motifs": [
+          -0.027665196802520154,
+          0.01179508326872873
+        ],
+        "family+genes+motifs": [
+          -0.015950893629410913,
+          0.0047665118097650555
+        ]
+      },
+      "diameter-adjusted": {
+        "family": [
+          -0.00873432681019739,
+          0.012359176008517124
+        ],
+        "motifs": [
+          -0.035308077625041845,
+          0.02469262044492739
+        ],
+        "family+genes+motifs": [
+          -0.026647669236320847,
+          0.015677003649488645
+        ]
+      }
+    }
+  },
+  "structure_bridge": {
+    "diameter+birefringence": {
+      "log_toughness": [
+        227,
+        -0.008521820419871106,
+        0.013087561961687828
+      ],
+      "log_modulus": [
+        227,
+        -0.014488372447983266,
+        0.0066921275675834915
+      ],
+      "log_strength": [
+        227,
+        0.10149050967568014,
+        0.008821036798070099
+      ],
+      "log_strain": [
+        227,
+        0.058924524711633654,
+        0.01704689596437182
+      ]
+    },
+    "+crystallinity": {
+      "log_toughness": [
+        158,
+        -0.033079798655801976,
+        0.014877359476815595
+      ],
+      "log_modulus": [
+        158,
+        -0.018567628332107476,
+        0.014907901293056997
+      ],
+      "log_strength": [
+        158,
+        0.04921381864285279,
+        0.02531234821609506
+      ],
+      "log_strain": [
+        158,
+        0.02737645805939439,
+        0.014558073725098465
+      ]
+    }
+  }
+}
