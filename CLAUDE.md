@@ -131,6 +131,25 @@ Full roadmap (5 stages):
   every branch; Leeds 10.5518/975 and Montazeri et al. are on blocked
   hosts; Zenodo/figshare searches return only single-system studies.
   Getting modulus data is now the binding constraint on Aim 2.
+  Checked and ruled out: Zenodo record 14791268 is the *PeptideMiner*
+  paper, not the modulus one - its `phase_data_clean.csv` is MD5-identical
+  (3c02db78...) to the copy already in `data/`, and Zenodo carries no
+  record for the modulus work. Do not re-fetch it.
+  **But a concrete route to modulus data was found there.** That record's
+  `trainset.jsonl` / `testset.jsonl` are the GPT fine-tuning corpus: 75
+  excerpts of real source papers. Their extraction schema targets phase
+  and conditions ONLY - it has no mechanical fields - yet the excerpt text
+  mentions "modulus" 41 times, "storage modulus" 11 and "rheolog" 62,
+  often with exactly the protocol fields `dataset_schema.py` marks
+  mandatory (e.g. "frequency sweep ... 0.8% w/v ... strain constant at
+  0.1% ... 6-100 rad/s"). So the modulus data is present in the literature
+  these authors already mined and was simply not among the extraction
+  targets. Extending that extraction schema to mechanics is a well-defined
+  path to the missing corpus - and is itself the kind of tool-grounded
+  extraction task Aim 2's agent is meant to perform. Caveat seen in the
+  excerpts: some papers report only G'/G'' *ratios* ("exceeds by a factor
+  of 12") rather than absolute Pa, which is precisely the heterogeneity
+  `heterogeneity_report()` exists to quantify.
 - **No training has been run.** No SFT, ORPO, or GRPO training has been
   executed. Everything above is data/reward pipeline scaffolding.
 
